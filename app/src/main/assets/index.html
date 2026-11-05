@@ -240,7 +240,8 @@ Object.assign(EX,{
 });
 
 // Problem areas: which exercises to swap (id) or drop (null) for each sore spot.
-const AREAS = {shoulder:"Плечо",elbow:"Локоть",wrist:"Запястье",neck:"Шея",back:"Поясница",knee:"Колено"};
+const AREAS = {shoulder:"Плечо",elbow:"Локоть",wrist:"Запястье",neck:"Шея",back:"Спина, позвоночник",knee:"Колено",leg:"Нога (бедро, стопа)"};
+const COND = {pancreas:"Поджелудочная"};
 const RISK = {
  pushup:{shoulder:"pushup_inc",elbow:"pushup_inc",wrist:"floor_press"},
  pushup_inc:{wrist:"floor_press"},
@@ -361,6 +362,21 @@ function gearFor(id,p){
  return null;
 }
 
+// Sore leg (mild): swap single-leg and jumping work for gentler moves
+[["split","bridge"],["rev_lunge","bridge"],["sl_rdl","bridge"],["calf",null],["jacks","cardio"],["goblet","box_squat"],["bw_squat","box_squat"],["s_pigeon","s_fig4"]].forEach(function(x){RISK[x[0]]=RISK[x[0]]||{};RISK[x[0]].leg=x[1];});
+// Strong pain: drop everything that loads that place
+const SEVERE = {
+ leg:["goblet","bw_squat","box_squat","rdl","sl_rdl","split","rev_lunge","calf","jacks","cardio","w_squat","w_march","bridge","farmer","s_hip","s_pigeon","s_fig4","s_quad","s_hams"],
+ knee:["goblet","bw_squat","box_squat","split","rev_lunge","jacks","cardio","w_squat","w_march","calf","pushup_knee","s_hip","s_quad","s_pigeon","s_child","s_lats"],
+ back:["rdl","sl_rdl","superman","s_cobra","knee_raise","leg_raise","goblet","split","rev_lunge","farmer","shrug","s_hams","jacks","pullup_neg","hang","row","calf"],
+ shoulder:["pushup","pushup_inc","pushup_knee","pushup_close","pike_push","dips","bench_dip","floor_press","lat_raise","pullup_band","pullup_neg","hang","knee_raise","w_arms","plank","side_plank","s_chest","s_shoulder","s_lats"],
+ elbow:["pushup","pushup_inc","pushup_knee","pushup_close","pike_push","dips","bench_dip","floor_press","curl","hammer","band_curl","kickback","wrist","pullup_band","pullup_neg","hang","row","band_row","farmer"],
+ wrist:["pushup","pushup_inc","pushup_knee","pushup_close","pike_push","dips","bench_dip","floor_press","curl","hammer","band_curl","kickback","wrist","farmer","hang","w_cat","bird_dog","s_cobra"],
+ neck:["neck_front","neck_back","neck_side","chin_tuck","shrug","s_neck","pullup_band","pullup_neg"]
+};
+// 45+: no jumps and fewer joint-heavy moves
+const AGE45 = {jacks:"cardio",dips:"pushup_inc",pike_push:"pushup_inc",pullup_neg:"pullup_band",knee_raise:"dead_bug",hang:"farmer"};
+function isOlder(p){return +p.age>=45;}
 // ---------- workouts ----------
 const WARM = ["w_march","w_arms","w_hips","w_cat","w_er","w_squat"];
 const TPL = {
@@ -375,7 +391,7 @@ const TPL = {
  STR:{n:"Растяжка 10 минут",warm:["w_cat"],main:[],extra:[],neck:[],core:[],stretch:["s_chest","s_lats","s_hams","s_hip","s_quad","s_pigeon","s_child","s_cobra","s_neck","s_shoulder"]}
 };
 const BLOCKS = [["warm","Разминка"],["main","Основная часть"],["extra","Руки и хват"],["neck","Шея"],["core","Пресс"],["finisher","Кардио"],["stretch","Растяжка"]];
-const BODY = {mass:"Набрать мышцы",cut:"Сбросить жир",recomp:"Сила и рельеф"};
+const BODY = {mass:"Набрать мышцы",cut:"Сбросить жир",recomp:"Сила и рельеф",health:"Здоровье и тонус"};
 const EXTRAS = {flex:"Гибкость",endur:"Выносливость"};
 const PACES = {easy:"Плавно",mid:"Средне",hard:"Быстро"};
 const WDN = ["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];
@@ -392,11 +408,11 @@ function sleepDur(n){if(!n)return null;const b=toMin(n.bed),w=toMin(n.wake);if(b
 
 function defaultState(){
  return {v:2,updatedAt:0,
-  profile:{sex:"m",age:"",height:"",weight:"",body:"recomp",flex:false,endur:false,pace:"mid",areas:[],areaNote:"",eq:emptyEq(),onboarded:false,start:dkey(),checked:false},
+  profile:{sex:"m",age:"",height:"",weight:"",body:"recomp",flex:false,endur:false,pace:"mid",areas:[],areaLvl:{},cond:[],areaNote:"",eq:emptyEq(),onboarded:false,start:dkey(),checked:false},
   settings:{voice:true,loud:2,ring:false,notif:{workout:true,water:true,meals:true,sleep:true}},
   cur:{neck:"",chest:"",waist:"",biceps:"",forearm:"",thigh:"",calf:""},
   meas:[],lvl:{},alt:{},seq:0,history:[],missed:{},mod:null,
-  sleep:{},bedPending:null,water:{},meals:{},supps:[{id:"creatine",on:true}],custom:[],suppLog:{},food:{},myFoods:[]
+  sleep:{},bedPending:null,water:{},meals:{},supps:[],custom:[],suppLog:{},food:{},myFoods:[]
  };
 }
 // Bring profiles saved by the first version (one "goal", "shoulder" yes/no) to the new shape.
@@ -410,6 +426,8 @@ function normProfile(p,raw){
  delete p.goal;delete p.shoulder;
  if(!Array.isArray(p.areas))p.areas=[];
  p.areas=p.areas.filter(function(a){return AREAS[a];});
+ const lv={};if(p.areaLvl&&typeof p.areaLvl==="object")p.areas.forEach(function(a){if(p.areaLvl[a]==="high")lv[a]="high";});p.areaLvl=lv;
+ p.cond=(Array.isArray(p.cond)?p.cond:[]).filter(function(c){return COND[c];});
  if(p.body!==null&&!BODY[p.body])p.body="recomp";
  p.flex=!!p.flex;p.endur=!!p.endur;
  return p;
@@ -427,6 +445,7 @@ function trainDays(p){if(customDays(p))return p.days.slice().sort(function(a,b){
 function planSeq(p){
  let n=daysPerWeek(p);
  if(n<3)n=3; if(n>5)n=5;
+ if(p.body==="health")return n===3?["FA","MOB","FB"]:n===4?["FA","MOB","FB",p.endur?"END":"MOB"]:["FA","MOB","FB",p.endur?"END":"MOB","FA"];
  if(!p.body&&(p.flex||p.endur)){
   // no body goal: the extras lead the plan
   if(p.flex&&!p.endur)return n===3?["FA","MOB","FB"]:n===4?["FA","MOB","FB","MOB"]:["FA","MOB","LA","MOB","UA"];
@@ -443,11 +462,12 @@ function nutrition(p){
  const n=daysPerWeek(p);const act=n>=5?1.55:n>=4?1.5:1.4;
  const cardio=p.endur?100:0;
  const tdee=bmr*act+cardio;
- const ADJ={mass:{easy:200,mid:300,hard:450},cut:{easy:-300,mid:-450,hard:-600},recomp:{easy:0,mid:-150,hard:-250}};
+ const ADJ={mass:{easy:200,mid:300,hard:450},cut:{easy:-300,mid:-450,hard:-600},recomp:{easy:0,mid:-150,hard:-250},health:{easy:0,mid:0,hard:0}};
  const adj=p.body?(ADJ[p.body][p.pace]||0):0;
  const kcal=Math.round((tdee+adj)/50)*50;
- const pk=p.body==="mass"?1.8:p.body?2.0:1.6;
- const protein=Math.round(w*pk),fat=Math.round(w*0.9);
+ const pk=p.body==="mass"?1.8:p.body==="health"?1.4:p.body?2.0:1.6;
+ const panc=(p.cond||[]).indexOf("pancreas")>=0;
+ const protein=Math.round(w*pk),fat=Math.round(w*(panc?0.8:0.9));
  const carbs=Math.max(0,Math.round((kcal-protein*4-fat*9)/4));
  return {bmr:Math.round(bmr),tdee:Math.round(tdee),cardio:cardio,adj:adj,kcal:kcal,protein:protein,fat:fat,carbs:carbs};
 }
@@ -469,7 +489,11 @@ function resolveEx(id0,st){
   if(n&&!n.req.every(function(r){return hasReq(r,eq);})){why.push("eq");if(!n.to)return {id:null,why:why};id=n.to;continue;}
   let hit=null;
   for(let i=0;i<areas.length;i++){const r=RISK[id];if(r&&Object.prototype.hasOwnProperty.call(r,areas[i])){hit=areas[i];break;}}
+  const lvl=p.areaLvl||{};let sev=null;
+  for(let i=0;i<areas.length;i++){if(lvl[areas[i]]==="high"&&(SEVERE[areas[i]]||[]).indexOf(id)>=0){sev=areas[i];break;}}
+  if(sev){why.push("area");return {id:null,why:why};}
   if(hit){why.push("area");const to=RISK[id][hit];if(to===null)return {id:null,why:why};id=to;continue;}
+  if(isOlder(p)&&Object.prototype.hasOwnProperty.call(AGE45,id)){why.push("age");id=AGE45[id];continue;}
   return {id:id,why:why};
  }
  return {id:null,why:why};
@@ -500,7 +524,9 @@ function buildWorkout(tplId,st,opts){
  if(mod==="boost")notes.push("Наверстываем пропуск: в основных упражнениях +1 подход.");
  if(mod==="light")notes.push("После болезни или боли: облегчённая тренировка, повторов меньше. Если плохо — остановись.");
  const factor=(tired?0.8:1)*(mod==="light"?0.75:1);
- let restBase=p.body==="mass"?90:p.body==="recomp"?75:p.body==="cut"?50:60;
+ let restBase=p.body==="mass"?90:p.body==="recomp"||p.body==="health"?75:p.body==="cut"?50:60;
+ const older=isOlder(p);
+ if(older)notes.push("После 45 лет тренер даёт разминку дольше, отдых больше и убирает прыжки.");
  if(p.endur)restBase=Math.max(30,restBase-15);
  if(T.circuit)restBase=15;
  const blocks=Object.assign({},T);
@@ -517,7 +543,7 @@ function buildWorkout(tplId,st,opts){
    if(id!==id0&&byArea)changed.push({from:id0,to:id});
    if(used[group+id])return;used[group+id]=1;
    const e=EX[id];let sets=1,rest=0,val;
-   if(key==="warm"||key==="stretch"){val=e.k==="reps"?e.r:Math.round(e.t*(key==="stretch"&&p.flex?1.5:1));}
+   if(key==="warm"||key==="stretch"){val=e.k==="reps"?e.r:Math.round(e.t*((key==="stretch"&&p.flex)||(key==="warm"&&older)?1.5:1));}
    else if(key==="finisher"){val=id==="cardio"?cardioSec(p):e.t;}
    else{
     val=exTarget(id,st,p,!!T.circuit);
@@ -526,6 +552,7 @@ function buildWorkout(tplId,st,opts){
     else if(key==="neck"){sets=2;rest=30;}
     else if(key==="core"){sets=Math.min(S,3);rest=p.endur?30:45;}
     if(factor<1){val=Math.max(1,Math.round(val*factor));rest+=15;}
+    if(older)rest+=15;
    }
    let sides=e.s||1;
    if(id==="lat_raise"){const eqn=normEq(p.eq),lw=dbPick(eqn.db,"light");if(lw!=null&&!hasPair(eqn.db,lw))sides=2;}
@@ -653,6 +680,10 @@ const FOOD = [
  {id:"tomato",n:"Помидор",k:20,p:0.6,f:0.2,c:4.2,u:{n:"шт",g:120}},
  {id:"blini",n:"Блины",k:233,p:6,f:12,c:26,u:{n:"шт",g:50}},
  {id:"shawarma",n:"Шаурма",k:215,p:9,f:11,c:20,u:{n:"шт",g:350}},
+ {id:"doner",n:"Донер (кебаб в лепёшке)",k:230,p:11,f:11,c:22,u:{n:"шт",g:400},a:"кебаб дёнер денер",note:"Средние цифры: размер и начинка в разных местах разные."},
+ {id:"nuggets",n:"Наггетсы куриные",k:295,p:16,f:18,c:17,u:{n:"шт",g:17},a:"нагетсы"},
+ {id:"fries",n:"Картошка фри",k:312,p:3.4,f:15,c:41,u:{n:"порция",g:110},a:"картофель фри"},
+ {id:"burger",n:"Бургер (гамбургер)",k:250,p:13,f:11,c:25,u:{n:"шт",g:200},a:"чизбургер"},
  {id:"choco",n:"Шоколад молочный",k:550,p:6.9,f:35.7,c:54.4,u:{n:"плитка",g:90}},
  {id:"sugar",n:"Сахар",k:399,p:0,f:0,c:99.8,u:{n:"ч. ложка",g:5}},
  {id:"honey",n:"Мёд",k:328,p:0.8,f:0,c:80.3,u:{n:"ч. ложка",g:10}},
@@ -741,7 +772,7 @@ function prune(st){
  if(st.meas.length>200)st.meas=st.meas.slice(-200);
 }
 
-G.KL={EX:EX,TPL:TPL,BLOCKS:BLOCKS,BODY:BODY,EXTRAS:EXTRAS,AREAS:AREAS,RISK:RISK,normProfile:normProfile,goalLabel:goalLabel,resolveEx:resolveEx,areaChanges:areaChanges,FOOD:FOOD,foodSearch:foodSearch,foodCalc:foodCalc,foodTotals:foodTotals,EQ_LABEL:EQ_LABEL,normEq:normEq,emptyEq:emptyEq,gearFor:gearFor,fmtKg:fmtKg,REASONS:REASONS,REASON_FX:REASON_FX,recentMissed:recentMissed,weekStart:weekStart,weekReport:weekReport,dayAdd:dayAdd,PACES:PACES,WDN:WDN,SUPP_LIB:SUPP_LIB,WHEN:WHEN,
+G.KL={EX:EX,TPL:TPL,BLOCKS:BLOCKS,BODY:BODY,EXTRAS:EXTRAS,AREAS:AREAS,RISK:RISK,normProfile:normProfile,goalLabel:goalLabel,resolveEx:resolveEx,areaChanges:areaChanges,COND:COND,isOlder:isOlder,FOOD:FOOD,foodSearch:foodSearch,foodCalc:foodCalc,foodTotals:foodTotals,EQ_LABEL:EQ_LABEL,normEq:normEq,emptyEq:emptyEq,gearFor:gearFor,fmtKg:fmtKg,REASONS:REASONS,REASON_FX:REASON_FX,recentMissed:recentMissed,weekStart:weekStart,weekReport:weekReport,dayAdd:dayAdd,PACES:PACES,WDN:WDN,SUPP_LIB:SUPP_LIB,WHEN:WHEN,
  dkey:dkey,parseKey:parseKey,toMin:toMin,fmtMin:fmtMin,nowMin:nowMin,fmtDur:fmtDur,sleepDur:sleepDur,defaultState:defaultState,
  weeksSince:weeksSince,daysPerWeek:daysPerWeek,trainDays:trainDays,autoDays:autoDays,customDays:customDays,planSeq:planSeq,nextTpl:nextTpl,nutrition:nutrition,waterTarget:waterTarget,
  exTarget:exTarget,buildWorkout:buildWorkout,applyFeedback:applyFeedback,avgWake:avgWake,dayPlan:dayPlan,prune:prune,clamp:clamp};
@@ -1071,13 +1102,15 @@ function missedCard(){
  return h+'</div></div>';
 }
 const MEALS=[["breakfast","Завтрак"],["lunch","Обед"],["dinner","Ужин"],["snack","Перекусы"]];
-let FU=null;
+let FU=null,foodDay=0;
+function fkey(){return foodDay?K.dkey(new Date(Date.now()-864e5)):today();}
+function panc(){return (st.profile.cond||[]).indexOf("pancreas")>=0;}
 function fmtN(v){return String(Math.round(v*10)/10).replace(".",",");}
 function findFood(id){return (st.myFoods||[]).find(function(f){return f.id===id;})||K.FOOD.find(function(f){return f.id===id;});}
 function foodCard(){
- const n=K.nutrition(st.profile);const list=st.food[today()]||[];const t=K.foodTotals(list);
+ const n=K.nutrition(st.profile);const list=st.food[fkey()]||[];const t=K.foodTotals(list);
  const bar=function(v,max){return '<div class="bar"><i style="width:'+Math.min(100,Math.round(v/Math.max(1,max)*100))+'%'+(v>max*1.1?';background:var(--bad)':'')+'"></i></div>';};
- let h='<div class="card"><div class="row between"><h3>Еда сегодня</h3><span class="num"><b>'+t.k+'</b> из '+n.kcal+' ккал</span></div>'+bar(t.k,n.kcal);
+ let h='<div class="card"><div class="row between"><h3>Еда</h3><div class="chips"><button class="chip'+(!foodDay?" on":"")+'" data-act="food-day" data-v="0">Сегодня</button><button class="chip'+(foodDay?" on":"")+'" data-act="food-day" data-v="1">Вчера</button></div></div><div class="row between"><span class="small muted">'+(foodDay?"Вчера":"Сегодня")+'</span><span class="num"><b>'+t.k+'</b> из '+n.kcal+' ккал</span></div>'+bar(t.k,n.kcal);
  h+='<div class="row between small"><span>Белок <b class="num">'+t.p+'</b> из '+n.protein+' г</span><span class="muted num">Ж '+t.f+' / '+n.fat+' · У '+t.c+' / '+n.carbs+'</span></div>'+bar(t.p,n.protein);
  h+='<div class="list">';
  MEALS.forEach(function(m){
@@ -1087,9 +1120,11 @@ function foodCard(){
   items.forEach(function(y){const x=y[0];h+='<div class="row between small" style="flex-wrap:nowrap"><span class="grow">'+esc(x.n)+' <span class="muted">· '+esc(x.q)+'</span></span><span class="num" style="white-space:nowrap">'+x.k+' ккал</span><button class="iconbtn" style="width:32px;height:32px" data-act="food-del" data-i="'+y[1]+'" aria-label="Убрать '+esc(x.n)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>';});
   h+='</div>';
  });
- return h+'</div></div>';
+ h+='</div>';
+ if(panc())h+='<div class="note small">Поджелудочная: ешь 5–6 раз в день небольшими порциями, поменьше жирного и жареного, без алкоголя. Питание лучше согласовать с врачом.</div>';
+ return h+'</div>';
 }
-function foodRow(f){return '<button class="exrow" data-act="food-pick" data-id="'+esc(f.id)+'"><span class="grow">'+esc(f.n)+(f.mine?' <span class="pill acc">мой</span>':'')+'</span><span class="dose small muted">'+f.k+' ккал/100 г</span></button>';}
+function foodRow(f){return '<button class="exrow" data-act="food-pick" data-id="'+esc(f.id)+'"><span class="grow">'+esc(f.n)+(f.mine?' <span class="pill acc">мой</span>':'')+(panc()&&f.f>=15?' <span class="pill warn">жирное</span>':'')+'</span><span class="dose small muted">'+f.k+' ккал/100 г</span></button>';}
 function recentFoods(){
  const seen={},out=[];const ks=Object.keys(st.food||{}).sort().reverse();
  for(let i=0;i<ks.length&&out.length<6;i++){const l=st.food[ks[i]].slice().reverse();for(let j=0;j<l.length&&out.length<6;j++){const f=findFood(l[j].pid);if(f&&!seen[f.id]){seen[f.id]=1;out.push(f);}}}
@@ -1124,6 +1159,7 @@ function drawFoodAmt(){
  const f=findFood(FU.pid);
  let h='<div class="row between"><button class="btn small ghost" data-act="food-back">← К списку</button>'+ICON_CLOSE+'</div><h2>'+esc(f.n)+'</h2><p class="small muted">На 100 г: '+f.k+' ккал · Б '+fmtN(f.p)+' · Ж '+fmtN(f.f)+' · У '+fmtN(f.c)+'</p>';
  if(f.note)h+='<div class="note small">'+esc(f.note)+'</div>';
+ if(panc()&&f.f>=15)h+='<div class="note red small">Жирный продукт. При больной поджелудочной лучше съесть поменьше или заменить.</div>';
  if(f.u)h+='<div class="chips"><button class="chip'+(FU.mode==="unit"?" on":"")+'" data-act="food-mode" data-v="unit">Штуками</button><button class="chip'+(FU.mode==="g"?" on":"")+'" data-act="food-mode" data-v="g">Граммами</button></div>';
  const unitLbl=FU.mode==="unit"?"сколько штук · 1 "+f.u.n+" ≈ "+f.u.g+" г":"граммов";
  h+='<div class="row" style="flex-wrap:nowrap"><button class="btn" data-act="food-step" data-v="-1" aria-label="Меньше" style="min-width:52px">−</button><input id="food-amt" type="number" inputmode="decimal" step="'+(FU.mode==="unit"?"0.5":"10")+'" value="'+FU.amt+'" style="text-align:center;font-size:20px"><button class="btn" data-act="food-step" data-v="1" aria-label="Больше" style="min-width:52px">+</button></div><p class="small muted target">'+esc(unitLbl)+'</p>';
@@ -1176,6 +1212,8 @@ function timelineCard(){
 function viewToday(){
  let h='<div class="stack">';
  h+=missedCard()+workoutCard()+sleepCard()+foodCard()+waterCard()+timelineCard();
+ const hiA=st.profile.areas.filter(function(a){return (st.profile.areaLvl||{})[a]==="high";});
+ if(hiA.length)h+='<div class="note red small"><b>Сильно болит: '+esc(hiA.map(function(a){return K.AREAS[a].toLowerCase();}).join(", "))+'.</b> Тренер убрал всё, что нагружает это место. Обязательно покажись врачу и спроси, какие нагрузки можно.</div>';
  if(st.profile.areas.length)h+='<div class="note red small"><b>Больные места: '+esc(st.profile.areas.map(function(a){return K.AREAS[a];}).join(", "))+'.</b> Тренер уже убрал и заменил опасные для них упражнения. Делай всё без острой боли. Если боль держится дольше 1–2 недель или усиливается, сходи к врачу.</div>';
  return h+'</div>';
 }
@@ -1289,7 +1327,7 @@ function viewMe(){
  h+='</div><p class="section-label">Плюс к этому</p><div class="chips">';
  Object.keys(K.EXTRAS).forEach(function(g){h+='<button class="chip'+(p[g]?" on":"")+'" data-act="extra" data-v="'+g+'" aria-pressed="'+(!!p[g])+'">'+K.EXTRAS[g]+'</button>';});
  h+='</div><div class="small stack" style="gap:6px"><p><b>Сейчас: '+esc(K.goalLabel(p))+'.</b></p>';
- if(p.body)h+='<p class="muted">'+({mass:"Больше еды, тяжелее упражнения, отдых между подходами длиннее. Вес растёт, вместе с ним мышцы.",cut:"Чуть меньше еды, больше повторов, кардио в конце. Уходит жир, мышцы остаются.",recomp:"Ешь свою норму и тренируйся. Жир медленно уходит, мышцы растут. Хорошо для новичка."})[p.body]+'</p>';
+ if(p.body)h+='<p class="muted">'+({mass:"Больше еды, тяжелее упражнения, отдых между подходами длиннее. Вес растёт, вместе с ним мышцы.",cut:"Чуть меньше еды, больше повторов, кардио в конце. Уходит жир, мышцы остаются.",recomp:"Ешь свою норму и тренируйся. Жир медленно уходит, мышцы растут. Хорошо для новичка.",health:"Спокойные тренировки на всё тело, много растяжки, без перегрузок. Чтобы быть в форме и меньше болело."})[p.body]+'</p>';
  if(p.flex)h+='<p class="muted">Гибкость: растяжка в каждой тренировке в 1,5 раза дольше'+(K.daysPerWeek(p)===5&&!p.endur?", плюс отдельный день гибкости":"")+'.</p>';
  if(p.endur)h+='<p class="muted">Выносливость: отдых короче, в конце кардио '+Math.round(K.buildWorkout("FA",st,{}).steps.filter(function(s){return s.id==="cardio";}).map(function(s){return s.val;})[0]/60||3)+' мин'+(K.planSeq(p).indexOf("END")>=0?", плюс тренировка «Выносливость» с коротким отдыхом":"")+'. Со временем пропадёт одышка.</p>';
  h+='</div>';
@@ -1340,7 +1378,7 @@ function drawWizard(){
  else if(step==="meas"){body='<h2>Замеры тела, см</h2><p class="small muted">Нужны, чтобы видеть, как меняется тело. Если сейчас нет ленты — пропусти.</p><div class="grid2">'+MEAS.map(function(m){return '<label class="f">'+m[1]+'<input type="number" inputmode="decimal" step="0.5" id="wz-ms-'+m[0]+'" value="'+esc(st.cur[m[0]])+'" placeholder="—"></label>';}).join("")+'</div><details class="small"><summary class="muted">Как правильно мерить</summary><p style="margin-top:6px">Утром, до еды, мягкой лентой. Шея — под кадыком. Грудь — по соскам, на выдохе. Талия — по пупку, живот не втягивать. Бицепс — в напряжении, самое толстое место. Бедро и голень — самое толстое место.</p></details>';btns='<button class="btn primary block" data-act="wz-next" data-check="meas">Дальше</button><button class="btn ghost block" data-act="wz-next">Заполню позже</button>';}
  else if(step==="goal"){body='<h2>Чего хочешь?</h2><p class="small muted">Можно выбрать несколько. Из первых трёх — одну.</p><p class="section-label" style="margin-top:0">Тело</p><div class="chips">'+Object.keys(K.BODY).map(function(g){return '<button class="chip'+(p.body===g?" on":"")+'" data-act="body" data-v="'+g+'">'+K.BODY[g]+'</button>';}).join("")+'</div><p class="section-label">Плюс к этому</p><div class="chips">'+Object.keys(K.EXTRAS).map(function(g){return '<button class="chip'+(p[g]?" on":"")+'" data-act="extra" data-v="'+g+'">'+K.EXTRAS[g]+'</button>';}).join("")+'</div><p><b>Выбрано: '+esc(K.goalLabel(p))+'</b></p>';}
  else if(step==="pace"){body='<h2>Как быстро?</h2><div class="chips">'+Object.keys(K.PACES).map(function(g){return '<button class="chip'+(p.pace===g?" on":"")+'" data-act="pace" data-v="'+g+'">'+K.PACES[g]+'</button>';}).join("")+'</div><p class="muted">'+paceText(p)+'</p><h2 style="margin-top:8px">В какие дни удобно?</h2><p class="small muted">Отметь свои дни или оставь выбор тренеру. Первая тренировка в любом случае — сегодня.</p>'+daysPicker();}
- else if(step==="areas"){body='<h2>Что-нибудь болит?</h2><p class="small muted">Тренер уберёт или заменит упражнения, которые нагружают эти места.</p><div class="chips">'+Object.keys(K.AREAS).map(function(a){return '<button class="chip'+(hasArea(a)?" on":"")+'" data-act="area" data-v="'+a+'">'+K.AREAS[a]+'</button>';}).join("")+'</div><label class="f">Своя заметка (необязательно)<input id="pf-areaNote" data-pf="areaNote" maxlength="80" value="'+esc(p.areaNote||"")+'"></label>';btns='<button class="btn primary block" data-act="wz-next">Дальше</button>'+(p.areas.length?'':'<p class="small muted target">Если ничего не болит, просто жми «Дальше».</p>');}
+ else if(step==="areas"){body='<h2>Что-нибудь болит?</h2><p class="small muted">Тренер уберёт или заменит упражнения, которые нагружают эти места.</p><div class="chips">'+Object.keys(K.AREAS).map(function(a){return '<button class="chip'+(hasArea(a)?" on":"")+'" data-act="area" data-v="'+a+'">'+K.AREAS[a]+'</button>';}).join("")+'</div>'+areaLvlHtml()+condHtml()+'<label class="f">Своя заметка (необязательно)<input id="pf-areaNote" data-pf="areaNote" maxlength="80" value="'+esc(p.areaNote||"")+'"></label>';btns='<button class="btn primary block" data-act="wz-next">Дальше</button>'+(p.areas.length?'':'<p class="small muted target">Если ничего не болит, просто жми «Дальше».</p>');}
  else if(step==="eq"){body='<h2>Что есть дома?</h2><p class="small muted">Отметь всё, что есть. Тренер подберёт упражнения только под это.</p>'+eqEditor();}
  else if(step==="done"){
   const next=K.nextTpl(st);const w=K.buildWorkout(next,st,wOpts(next));const days=K.trainDays(p).map(function(d){return K.WDN[d];}).join(", ");const nu=K.nutrition(p);
@@ -1350,11 +1388,21 @@ function drawWizard(){
  h+='<div class="stack">'+body+'</div><div class="pl-actions">'+btns+'</div></div>';
  $("#wizard").innerHTML=h;
 }
+function areaLvlHtml(){
+ const p=st.profile;if(!p.areas.length)return '';
+ let h='<div class="stack" style="gap:8px"><p class="small muted" style="margin:0">Насколько болит?</p>';
+ p.areas.forEach(function(a){const hi=(p.areaLvl||{})[a]==="high";h+='<div class="row between"><span>'+K.AREAS[a]+'</span><div class="chips"><button class="chip'+(!hi?" on":"")+'" data-act="area-lvl" data-v="'+a+'" data-l="low">Немного</button><button class="chip'+(hi?" on":"")+'" data-act="area-lvl" data-v="'+a+'" data-l="high">Сильно</button></div></div>';});
+ return h+'<p class="small muted" style="margin:0">«Сильно» — тренер уберёт всё, что нагружает это место.</p></div>';
+}
+function condHtml(){
+ const p=st.profile;
+ return '<p class="section-label">Болезни</p><div class="chips">'+Object.keys(K.COND).map(function(c){const on=p.cond.indexOf(c)>=0;return '<button class="chip'+(on?" on":"")+'" data-act="cond" data-v="'+c+'" aria-pressed="'+on+'">'+K.COND[c]+'</button>';}).join("")+'</div>'+(p.cond.indexOf("pancreas")>=0?'<p class="small muted">Тренер чуть снизит жиры в норме и будет помечать жирные продукты в дневнике еды.</p>':'');
+}
 function areasCard(){
  const p=st.profile;
  let h='<div class="card"><h3>Болезненные места</h3><p class="small muted">Выбери, что болит. Тренер сам уберёт или заменит упражнения, которые это место нагружают.</p><div class="chips">';
  Object.keys(K.AREAS).forEach(function(a){const on=hasArea(a);h+='<button class="chip'+(on?" on":"")+'" data-act="area" data-v="'+a+'" aria-pressed="'+on+'">'+K.AREAS[a]+'</button>';});
- h+='</div><label class="f">Своя заметка (например, «щёлкает в колене»)<input id="pf-areaNote" data-pf="areaNote" maxlength="80" value="'+esc(p.areaNote||"")+'" placeholder="необязательно"></label><p class="small muted">Заметку тренер покажет перед каждой тренировкой, но упражнения меняет только по списку выше.</p>';
+ h+='</div></div>'+areaLvlHtml()+condHtml()+'<div><label class="f">Своя заметка (например, «щёлкает в колене»)<input id="pf-areaNote" data-pf="areaNote" maxlength="80" value="'+esc(p.areaNote||"")+'" placeholder="необязательно"></label><p class="small muted">Заметку тренер покажет перед каждой тренировкой, но упражнения меняет только по списку выше.</p></div>';
  const ch=K.areaChanges(st);
  if(p.areas.length){
   if(ch.length){h+='<p class="section-label" style="margin-top:0">Что поменялось в тренировках</p><div class="list">';ch.forEach(function(c){h+='<div class="li small"><div class="grow">'+esc(EX[c.from].n)+'</div><b>'+(c.to?"→ "+esc(EX[c.to].n):'<span class="pill bad">убрано</span>')+'</b></div>';});h+='</div>';}
@@ -1510,19 +1558,22 @@ document.addEventListener("click",function(ev){
   case "food-step":{const step=FU.mode==="unit"?0.5:10;FU.amt=Math.max(step,Math.round((+FU.amt+(+b.dataset.v)*step)*10)/10);drawFoodAmt();break;}
   case "food-save":{const f=findFood(FU.pid);const g=foodGrams();if(!(g>0)){toast("Впиши, сколько съел.");break;}
    const r=K.foodCalc(f,g);const q=FU.mode==="unit"&&f.u?f.u.n+" × "+fmtN(FU.amt)+" ≈ "+Math.round(g)+" г":Math.round(g)+" г";
-   st.food[k]=st.food[k]||[];st.food[k].push({m:FU.m,pid:f.id,n:f.n,q:q,g:Math.round(g),k:r.k,p:r.p,f:r.f,c:r.c});
-   const tl={breakfast:"breakfast",lunch:"lunch",dinner:"dinner"}[FU.m];if(tl){st.meals[k]=st.meals[k]||{};st.meals[k][tl]=true;}
+   const fk=fkey();st.food[fk]=st.food[fk]||[];st.food[fk].push({m:FU.m,pid:f.id,n:f.n,q:q,g:Math.round(g),k:r.k,p:r.p,f:r.f,c:r.c});
+   const tl={breakfast:"breakfast",lunch:"lunch",dinner:"dinner"}[FU.m];if(tl&&!foodDay){st.meals[k]=st.meals[k]||{};st.meals[k][tl]=true;}
    save();closeSheet();render();toast("Добавлено: "+f.n+", "+r.k+" ккал");break;}
-  case "food-del":{const l=st.food[k]||[];const i=+b.dataset.i;if(l[i]){l.splice(i,1);save();render();}break;}
+  case "food-del":{const l=st.food[fkey()]||[];const i=+b.dataset.i;if(l[i]){l.splice(i,1);save();render();}break;}
   case "food-custom":openSheet(foodCustomHtml());break;
   case "food-custom-save":{const num=function(id){return parseFloat(String($(id).value).replace(",","."));};const n=$("#cf-n").value.trim();const kk=num("#cf-k");
    if(!n||!(kk>=0)){toast("Впиши название и калории на 100 г.");break;}
    const f={id:"m"+Date.now().toString(36),n:n.slice(0,40),k:Math.round(kk),p:num("#cf-p")||0,f:num("#cf-f")||0,c:num("#cf-c")||0};const ug=num("#cf-u");if(ug>0)f.u={n:"шт",g:ug};
    st.myFoods.push(f);save();openFoodAmt(f.id);break;}
   case "rep-week":repWeek=+b.dataset.v;render();break;
+  case "area-lvl":{if(wz)wzRead();const p=st.profile;p.areaLvl=p.areaLvl||{};if(b.dataset.l==="high")p.areaLvl[b.dataset.v]="high";else delete p.areaLvl[b.dataset.v];save();render();break;}
+  case "cond":{if(wz)wzRead();const c=st.profile.cond;const i=c.indexOf(b.dataset.v);if(i>=0)c.splice(i,1);else c.push(b.dataset.v);save();render();break;}
+  case "food-day":foodDay=+b.dataset.v;render();break;
   case "body":if(wz)wzRead();st.profile.body=st.profile.body===b.dataset.v?null:b.dataset.v;st.profile.checked=true;save();render();break;
   case "extra":{const g=b.dataset.v;st.profile[g]=!st.profile[g];st.profile.checked=true;save();render();break;}
-  case "area":{const a=b.dataset.v;const ar=st.profile.areas;const i=ar.indexOf(a);if(i>=0)ar.splice(i,1);else ar.push(a);save();render();break;}
+  case "area":{if(wz)wzRead();const a=b.dataset.v;const ar=st.profile.areas;const i=ar.indexOf(a);if(i>=0){ar.splice(i,1);if(st.profile.areaLvl)delete st.profile.areaLvl[a];}else ar.push(a);save();render();break;}
   case "set-voice":st.settings.voice=!st.settings.voice;save();render();break;
   case "set-loud":st.settings.loud=+b.dataset.v;save();render();alarm();break;
   case "set-ring":st.settings.ring=!st.settings.ring;save();render();break;
