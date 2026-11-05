@@ -1,0 +1,51 @@
+name: Собрать APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Restore signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then echo "Нет секрета KEYSTORE_B64: добавь его в Settings → Secrets and variables → Actions"; exit 1; fi
+          echo "$KEYSTORE_B64" | base64 -d > app/release.jks
+
+      - name: Build APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/release/app-release.apk DisciplineGym-${{ github.run_number }}.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DisciplineGym-${{ github.run_number }}
+          path: DisciplineGym-${{ github.run_number }}.apk
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Discipline Gym 1.0.${{ github.run_number }}
+          files: DisciplineGym-${{ github.run_number }}.apk
+          body: Скачай файл DisciplineGym-${{ github.run_number }}.apk ниже и установи на телефон.
+    permissions:
+      contents: write
