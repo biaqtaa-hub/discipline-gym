@@ -730,9 +730,9 @@ const SUPP_LIB = {
 const WHEN = {breakfast:"с завтраком",post:"после тренировки",evening:"вечером",pre:"до тренировки",any:"в любое время"};
 
 // Day plan: events as offsets from wake-up (minutes), so a late wake shifts everything.
-function dayPlan(st,date){
+function dayPlan(st,date,o){
  date=date||new Date();const k=dkey(date);
- const p=st.profile;const firstDay=k===dkey()&&!(st.history||[]).some(function(h){return h.tpl!=="STR";});
+ const p=st.profile;const firstDay=((o&&o.today)||k===dkey())&&!(st.history||[]).some(function(h){return h.tpl!=="STR";});
  const training=firstDay||trainDays(p).indexOf(date.getDay())>=0;
  const night=st.sleep[k];const wake=(night&&toMin(night.wake)!=null)?toMin(night.wake):avgWake(st);
  const awake=960;const ev=[];
@@ -941,9 +941,21 @@ async function initSync(){
 // ---------- helpers ----------
 function $(s,r){return (r||document).querySelector(s);}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
-function today(){return K.dkey();}
+// The app's day lasts from waking up to the next waking up, not from midnight:
+// before the "new day" hour (auto: about 4 hours before your usual wake-up) it is still yesterday.
+function dayCutMin(){const s=st.settings.dayStart;if(typeof s==="number")return s*60;return K.clamp(K.avgWake(st)-240,180,720);}
+function appDate(){
+ const now=new Date();const cal=new Date(now.getFullYear(),now.getMonth(),now.getDate());const nm=K.nowMin(now);
+ if(nm>=dayCutMin())return cal;
+ const rec=st.sleep[K.dkey(cal)];const w=rec?K.toMin(rec.wake):null;
+ if(w!=null&&w<=nm)return cal;
+ return new Date(cal.getFullYear(),cal.getMonth(),cal.getDate()-1);
+}
+function today(){return K.dkey(appDate());}
+function todayPlan(){return K.dayPlan(st,appDate(),{today:true});}
+function calKey(){return K.dkey();}
 function checkSvg(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';}
-function dateLabel(){const d=new Date();return d.toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"});}
+function dateLabel(){const d=appDate();return d.toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"});}
 function plural(n,a,b,c){n=Math.abs(n)%100;const n1=n%10;if(n>10&&n<20)return c;if(n1>1&&n1<5)return b;if(n1===1)return a;return c;}
 function toast(msg,sound){
  const t=$("#toast");t.innerHTML='<span>'+esc(msg)+'</span><button type="button" id="toast-ok">Ок</button>';t.hidden=false;
@@ -1103,7 +1115,7 @@ function missedCard(){
 }
 const MEALS=[["breakfast","Завтрак"],["lunch","Обед"],["dinner","Ужин"],["snack","Перекусы"]];
 let FU=null,foodDay=0;
-function fkey(){return foodDay?K.dkey(new Date(Date.now()-864e5)):today();}
+function fkey(){const d=appDate();return foodDay?K.dkey(new Date(d.getFullYear(),d.getMonth(),d.getDate()-1)):today();}
 function panc(){return (st.profile.cond||[]).indexOf("pancreas")>=0;}
 function fmtN(v){return String(Math.round(v*10)/10).replace(".",",");}
 function findFood(id){return (st.myFoods||[]).find(function(f){return f.id===id;})||K.FOOD.find(function(f){return f.id===id;});}
@@ -1173,7 +1185,7 @@ function foodCustomHtml(){
  return '<div class="row between"><button class="btn small ghost" data-act="food-back">← К списку</button>'+ICON_CLOSE+'</div><h2>Свой продукт</h2><p class="small muted">Цифры «на 100 г» есть на упаковке, в блоке «Пищевая ценность».</p><label class="f">Название<input id="cf-n" maxlength="40" placeholder="например, Соус тартар Махеевъ"></label><div class="grid2"><label class="f">Ккал на 100 г<input id="cf-k" type="number" inputmode="decimal"></label><label class="f">Белки, г<input id="cf-p" type="number" inputmode="decimal"></label><label class="f">Жиры, г<input id="cf-f" type="number" inputmode="decimal"></label><label class="f">Углеводы, г<input id="cf-c" type="number" inputmode="decimal"></label></div><label class="f">Вес одной штуки, г (если считаешь штуками)<input id="cf-u" type="number" inputmode="decimal" placeholder="необязательно"></label><button class="btn primary block" data-act="food-custom-save">Сохранить продукт</button>';
 }
 function workoutCard(){
- const p=st.profile;const plan=K.dayPlan(st);const done=doneToday();const next=K.nextTpl(st);
+ const p=st.profile;const plan=todayPlan();const done=doneToday();const next=K.nextTpl(st);
  const w=K.buildWorkout(next,st,wOpts(next));
  let h='<div class="card hero">';
  if(done.length){
@@ -1192,12 +1204,12 @@ function workoutCard(){
  return h+'</div>';
 }
 function waterCard(){
- const plan=K.dayPlan(st);const target=K.waterTarget(st.profile,plan.training);const got=st.water[today()]||0;
+ const plan=todayPlan();const target=K.waterTarget(st.profile,plan.training);const got=st.water[today()]||0;
  const pct=Math.min(100,Math.round(got/target*100));
  return '<div class="card"><div class="row between"><h3>Вода</h3><span class="num"><b>'+(got/1000).toFixed(2).replace(".",",")+'</b> из '+(target/1000).toFixed(1).replace(".",",")+' л</span></div><div class="bar"><i style="width:'+pct+'%"></i></div><div class="row"><button class="btn small" data-act="water" data-ml="250">+ стакан 250</button><button class="btn small" data-act="water" data-ml="500">+ бутылка 500</button><button class="btn small ghost" data-act="water" data-ml="-250" aria-label="Убрать 250 мл">− 250</button></div>'+(st.supps.some(function(s){return s.id==="creatine"&&s.on;})?'<p class="small muted">Ты пьёшь креатин, поэтому не забывай про воду в течение дня.</p>':'')+'</div>';
 }
 function timelineCard(){
- const plan=K.dayPlan(st);const k=today();const nm=K.nowMin();
+ const plan=todayPlan();const k=today();const nm=K.nowMin();
  const meals=st.meals[k]||{},sl=st.suppLog[k]||{};
  const awakeNow=(nm-plan.wake+1440)%1440;
  let h='<div class="card"><div class="row between"><h3>Режим на сегодня</h3><span class="small muted">подъём '+K.fmtMin(plan.wake)+'</span></div><div class="list">';
@@ -1273,7 +1285,7 @@ function historyHtml(){
 
 // ---------- LIFE ----------
 function viewLife(){
- const p=st.profile;const n=K.nutrition(p);const plan=K.dayPlan(st);
+ const p=st.profile;const n=K.nutrition(p);const plan=todayPlan();
  let h='<div class="stack"><div class="card"><h2>Питание</h2><p class="small muted">Посчитано по твоему весу, росту, возрасту и цели «'+esc(K.goalLabel(p))+'». Это ориентир, а не строгий закон.</p>';
  h+='<div class="grid2"><div class="stat"><b>'+n.kcal+'</b><span>ккал в день</span></div><div class="stat"><b>'+n.protein+' г</b><span>белок</span></div><div class="stat"><b>'+n.fat+' г</b><span>жиры</span></div><div class="stat"><b>'+n.carbs+' г</b><span>углеводы</span></div></div>';
  if(n.cardio)h+='<p class="small">В норму добавлено '+n.cardio+' ккал на кардио для выносливости.</p>';
@@ -1306,7 +1318,9 @@ function viewLife(){
   ks.forEach(function(k){const n=st.sleep[k];const d=K.sleepDur(n);h+='<div class="li"><span class="t">'+esc(K.parseKey(k).toLocaleDateString("ru-RU",{day:"numeric",month:"short"}))+'</span><div class="grow">'+esc(n.bed)+' → '+esc(n.wake)+' · <b>'+K.fmtDur(d)+'</b></div><button class="btn small ghost" data-act="sleep-edit" data-k="'+k+'">Изменить</button></div>';});
   h+='</div>';
  }
- h+='<p class="small muted">Забыл отметить, когда уснул? Ничего: нажми «Изменить» или «Добавить ночь» и впиши время потом.</p></div>';
+ h+='<p class="small muted">Забыл отметить, когда уснул? Ничего: нажми «Изменить» или «Добавить ночь» и впиши время потом.</p>';
+ const ds=st.settings.dayStart;const autoH=K.fmtMin(K.clamp(K.avgWake(st)-240,180,720));
+ h+='<div class="stack" style="gap:6px"><b>Когда начинается новый день</b><p class="small muted" style="margin:0">Еда, вода и тренировка считаются до сна, а не до полуночи. Если ты ещё не спал, день не сбросится до этого времени (или пока ты не отметишь, что проснулся).</p><div class="chips"><button class="chip'+(typeof ds!=="number"?" on":"")+'" data-act="day-start" data-v="auto">Авто ('+autoH+')</button>'+[3,6,9,12,15].map(function(hh){return '<button class="chip'+(ds===hh?" on":"")+'" data-act="day-start" data-v="'+hh+'">'+String(hh).padStart(2,"0")+':00</button>';}).join("")+'</div></div></div>';
 
  // reminders
  h+='<div class="card"><h3>Напоминания</h3><p class="small">Пока приложение открыто, в нужное время прозвучит сигнал и появится подсказка. Если приложение закрыто, телефон его не разбудит — поэтому лучше поставь будильники на эти времена:</p><div class="list">';
@@ -1516,8 +1530,10 @@ document.addEventListener("click",function(ev){
   case "meal":{st.meals[k]=st.meals[k]||{};st.meals[k][b.dataset.k]=!st.meals[k][b.dataset.k];save();render();break;}
   case "supp":{st.suppLog[k]=st.suppLog[k]||{};st.suppLog[k][b.dataset.k]=!st.suppLog[k][b.dataset.k];save();render();break;}
   case "bed-now":st.bedPending=Date.now();save();toast("Спокойной ночи! Утром нажми «Я проснулся».");render();break;
-  case "wake-now":{const bed=K.fmtMin(K.nowMin(new Date(st.bedPending)));st.sleep[k]={bed:bed,wake:K.fmtMin(K.nowMin())};st.bedPending=null;save();render();toast("Доброе утро! Спал "+K.fmtDur(K.sleepDur(st.sleep[k])));break;}
-  case "sleep-save":{const bd=$("#in-bed").value,wk=$("#in-wake").value;if(!bd||!wk){toast("Впиши оба времени.");break;}st.sleep[k]={bed:bd,wake:wk};st.bedPending=null;save();render();break;}
+  case "wake-now":{const ck=calKey();const bed=K.fmtMin(K.nowMin(new Date(st.bedPending)));st.sleep[ck]={bed:bed,wake:K.fmtMin(K.nowMin())};st.bedPending=null;save();render();toast("Доброе утро! Спал "+K.fmtDur(K.sleepDur(st.sleep[ck])));break;}
+  case "sleep-save":{const bd=$("#in-bed").value,wk=$("#in-wake").value;if(!bd||!wk){toast("Впиши оба времени.");break;}
+   const nowD=new Date();const sk=K.toMin(wk)<=K.nowMin(nowD)?calKey():K.dkey(new Date(nowD.getFullYear(),nowD.getMonth(),nowD.getDate()-1));
+   st.sleep[sk]={bed:bd,wake:wk};st.bedPending=null;save();render();break;}
   case "sleep-edit":openSheet(sleepEditHtml(b.dataset.k,false));break;
   case "sleep-add":{const y=new Date();openSheet(sleepEditHtml(K.dkey(y),true));break;}
   case "sleep-edit-save":{const dIn=$("#se-date");const key=dIn?dIn.value:b.dataset.k;const bd=$("#se-bed").value,wk=$("#se-wake").value;if(!key||!bd||!wk){toast("Заполни дату и оба времени.");break;}st.sleep[key]={bed:bd,wake:wk};save();closeSheet();render();break;}
@@ -1570,6 +1586,7 @@ document.addEventListener("click",function(ev){
   case "rep-week":repWeek=+b.dataset.v;render();break;
   case "area-lvl":{if(wz)wzRead();const p=st.profile;p.areaLvl=p.areaLvl||{};if(b.dataset.l==="high")p.areaLvl[b.dataset.v]="high";else delete p.areaLvl[b.dataset.v];save();render();break;}
   case "cond":{if(wz)wzRead();const c=st.profile.cond;const i=c.indexOf(b.dataset.v);if(i>=0)c.splice(i,1);else c.push(b.dataset.v);save();render();break;}
+  case "day-start":st.settings.dayStart=b.dataset.v==="auto"?null:+b.dataset.v;save();render();toast("Новый день начинается в "+K.fmtMin(dayCutMin()));break;
   case "food-day":foodDay=+b.dataset.v;render();break;
   case "body":if(wz)wzRead();st.profile.body=st.profile.body===b.dataset.v?null:b.dataset.v;st.profile.checked=true;save();render();break;
   case "extra":{const g=b.dataset.v;st.profile[g]=!st.profile[g];st.profile.checked=true;save();render();break;}
@@ -1763,7 +1780,7 @@ $("#player").addEventListener("click",function(ev){
 // ---------- in-app reminders ----------
 function checkReminders(){
  if(P&&P.phase!=="ready")return;
- const plan=K.dayPlan(st);const now=new Date();const nm=K.nowMin(now);const k=today();
+ const plan=todayPlan();const now=new Date();const nm=K.nowMin(now);const k=today();
  plan.events.forEach(function(e){
   const id=k+e.key;if(fired[id])return;
   const diff=(nm-e.t+1440)%1440;
