@@ -1174,6 +1174,7 @@ function viewMe(){
  h+='</div><button class="btn primary block" data-act="meas-save">Сохранить замер на сегодня</button><details class="small"><summary class="muted">Как правильно мерить</summary><div class="stack" style="margin-top:6px"><p>Мерь утром, до еды, мягкой сантиметровой лентой. Лента лежит ровно, не пережимает кожу.</p><p>Шея — под кадыком. Грудь — по соскам, на выдохе. Талия — по пупку, живот не втягивать. Бицепс — самое толстое место, рука согнута и напряжена. Предплечье — самое толстое место. Бедро — самое толстое место под ягодицей. Голень — самое толстое место.</p><p>Мерь раз в 2 недели, одну и ту же сторону.</p></div></details>'+measHistory()+'</div>';
  h+='<div class="card"><h3>Прогресс упражнений</h3>'+lvlHtml()+'</div>';
  h+='<div class="card"><h3>Перенос данных</h3><p class="small muted">Чтобы перенести тренировки, сон и замеры в другое место (например, из браузера в приложение): здесь нажми «Скопировать данные», там — вставь их в поле ниже и нажми «Загрузить».</p><div class="row"><button class="btn small" data-act="data-copy">Скопировать данные</button></div><textarea id="data-in" rows="3" placeholder="Вставь сюда скопированные данные" style="font:500 13px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%"></textarea><button class="btn small ghost" data-act="data-load">Загрузить данные</button></div>';
+ if(NATIVE){let ver="";try{ver=window.Android.appVersion();}catch(e){}h+='<div class="card"><h3>Приложение</h3><p class="small muted">Версия '+esc(ver)+'. При запуске приложение само проверяет, нет ли новой версии.</p><button class="btn small" data-act="update-check">Проверить обновления</button></div>';}
  h+='<div class="card"><h3>Данные</h3><p class="small muted">Всё сохраняется на этом телефоне'+(syncRef?" и в твоём аккаунте Claude":"")+'.</p><div class="row"><button class="btn small" data-act="wz-open">Пройти настройку заново</button><button class="btn small ghost" data-act="reset-plan">Начать план заново (неделя 1)</button></div></div>';
  return h+'</div>';
 }
@@ -1355,6 +1356,7 @@ document.addEventListener("click",function(ev){
   case "miss-boost":st.mod=b.dataset.v==="1"?{type:"boost"}:null;save();closeSheet();render();toast(b.dataset.v==="1"?"Следующая тренировка будет сильнее":"Продолжаем по плану");break;
   case "go-areas":closeSheet();setTab("me");setTimeout(function(){const el=document.querySelector('[data-act="area"]');if(el)el.scrollIntoView({block:"center"});},50);break;
   case "notif":{const N=st.settings.notif;N[b.dataset.v]=!N[b.dataset.v];save();render();break;}
+  case "update-check":try{window.Android.checkUpdate();}catch(e){}break;
   case "notif-test":try{window.Android.testNotify();}catch(e){}break;
   case "battery":try{window.Android.openBatterySettings();}catch(e){}break;
   case "data-copy":{const txt=JSON.stringify(st);let ok=false;try{if(NATIVE){window.Android.copy(txt);ok=true;}}catch(e){}

@@ -30,6 +30,7 @@ class MainActivity : Activity() {
     private lateinit var web: WebView
     private var tts: TextToSpeech? = null
     private var ttsReady = false
+    private lateinit var updater: Updater
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,6 +76,9 @@ class MainActivity : Activity() {
             }
         }
 
+        updater = Updater(this)
+        updater.check(true)
+
         Reminders.createChannel(this)
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -88,6 +92,11 @@ class MainActivity : Activity() {
         web.evaluateJavascript("(window.__onBack && window.__onBack()) ? '1' : '0'") { result ->
             if (result != "\"1\"") finish()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::updater.isInitialized) updater.onResume()
     }
 
     override fun onDestroy() {
@@ -142,6 +151,14 @@ class MainActivity : Activity() {
             Reminders.save(this@MainActivity, json)
             Reminders.scheduleAll(this@MainActivity, json)
         }
+
+        @JavascriptInterface
+        fun checkUpdate() {
+            runOnUiThread { updater.check(false) }
+        }
+
+        @JavascriptInterface
+        fun appVersion(): String = updater.currentName()
 
         @JavascriptInterface
         fun testNotify() {
