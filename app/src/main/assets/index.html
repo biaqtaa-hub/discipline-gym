@@ -1238,7 +1238,10 @@ function render(){
 function sleepCard(){
  const n=lastNight();const dur=K.sleepDur(n);
  let h='<div class="card"><div class="row between"><h3>Сон</h3>';
- if(n&&dur!=null){
+ const pend0=st.bedPending&&(Date.now()-st.bedPending<20*3600e3);
+ if(pend0){
+  h+='<span class="pill acc">Спишь</span></div><p class="small muted">Ты отметил, что лёг в '+K.fmtMin(K.nowMin(new Date(st.bedPending)))+'. Когда проснёшься, нажми кнопку ниже — начнётся новый день.</p><button class="btn primary block" data-act="wake-now">Я проснулся</button><button class="btn small ghost" data-act="bed-cancel">Я ещё не сплю (отменить)</button>';
+ } else if(n&&dur!=null){
   const cls=dur>=420?"good":dur>=360?"warn":"bad";
   h+='<span class="pill '+cls+'">'+K.fmtDur(dur)+'</span></div>';
   h+='<p class="small muted">Уснул в '+esc(n.bed)+', проснулся в '+esc(n.wake)+'. '+(dur<360?"Мало сна: тренер облегчил сегодняшнюю тренировку.":dur<420?"Чуть меньше нормы. Постарайся сегодня лечь раньше.":"Хорошо выспался.")+'</p>';
@@ -1721,7 +1724,8 @@ document.addEventListener("click",function(ev){
   case "water":{st.water[k]=Math.max(0,(st.water[k]||0)+(+b.dataset.ml));save();render();break;}
   case "meal":{st.meals[k]=st.meals[k]||{};st.meals[k][b.dataset.k]=!st.meals[k][b.dataset.k];save();render();break;}
   case "supp":{st.suppLog[k]=st.suppLog[k]||{};st.suppLog[k][b.dataset.k]=!st.suppLog[k][b.dataset.k];save();render();break;}
-  case "bed-now":st.bedPending=Date.now();save();toast("Спокойной ночи! Утром нажми «Я проснулся».");render();break;
+  case "bed-now":st.bedPending=Date.now();save();toast("Спокойной ночи! Когда проснёшься, нажми «Я проснулся» в карточке «Сон».");render();window.scrollTo(0,0);break;
+  case "bed-cancel":st.bedPending=null;save();render();break;
   case "wake-now":{const ck=calKey();const bed=K.fmtMin(K.nowMin(new Date(st.bedPending)));st.sleep[ck]={bed:bed,wake:K.fmtMin(K.nowMin())};st.bedPending=null;save();render();toast("Доброе утро! Спал "+K.fmtDur(K.sleepDur(st.sleep[ck])));break;}
   case "sleep-save":{const bd=$("#in-bed").value,wk=$("#in-wake").value;if(!bd||!wk){toast("Впиши оба времени.");break;}
    const nowD=new Date();const sk=K.toMin(wk)<=K.nowMin(nowD)?calKey():K.dkey(new Date(nowD.getFullYear(),nowD.getMonth(),nowD.getDate()-1));
