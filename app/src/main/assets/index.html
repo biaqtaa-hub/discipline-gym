@@ -794,13 +794,17 @@ function ftAllowed(id,p){
 function fightPool(st){
  const f=st.fight||defaultFight(),p=st.profile,L=f.level||1;
  const singles=[];
- Object.keys(FT).forEach(function(id){const t=FT[id];if(t.type!=="base"&&t.lvl<=L&&ftAllowed(id,p))singles.push(id);});
- const combos=COMBOS.filter(function(c){return c[0]<=L&&c[1].every(function(id){return ftAllowed(id,p);});}).map(function(c){return c[1];});
+ const lr=f.learned||{};
+ const ok=function(id){const t=FT[id];if(t.type==="base"||!ftAllowed(id,p))return false;if(t.lvl<L)return true;if(t.lvl>L)return false;return !!lr[id]||id==="jab"||id==="cross";};
+ Object.keys(FT).forEach(function(id){if(ok(id))singles.push(id);});
+ const combos=COMBOS.filter(function(c){return c[0]<=L&&c[1].every(ok);}).map(function(c){return c[1];});
  return {singles:singles,combos:combos};
 }
 function rearWord(f){return (f&&f.stance==="south")?"левый":"правый";}
 function techSay(id,f){const t=FT[id];return t.sayRear?rearWord(f)+" "+t.sayRear:t.say;}
 function comboSay(ids,f){return ids.map(function(id){return techSay(id,f);}).join(", ");}
+const FT_HINT={jab:"прямой передней рукой",cross:"прямой задней рукой",hook:"боковой передней рукой",rhook:"боковой задней рукой",upper:"снизу вверх передней рукой",rupper:"снизу вверх задней рукой",block:"закрыть голову руками",slip:"убрать голову в сторону",duck:"присесть под удар",low:"задней ногой по бедру",teep:"толкнуть передней ногой",mid:"задней ногой по корпусу",knee:"коленом вперёд-вверх",elbow:"передним локтем вбок",check:"поднять колено, закрыться голенью"};
+function comboHint(ids){return ids.map(function(id){return FT_HINT[id]||"";}).join(" → ");}
 const FT_SHORT={jab:"джеб",cross:"прямой",hook:"хук",rhook:"задний хук",upper:"апперкот",rupper:"задний апперкот",block:"блок",slip:"уклон",duck:"нырок",low:"лоу-кик",teep:"тип",mid:"мидл-кик",knee:"колено",elbow:"локоть",check:"чек"};
 function comboShow(ids){return ids.map(function(id){const t=FT[id];return (t.num?t.num+" ":"")+(FT_SHORT[id]||t.n.toLowerCase());}).join(" · ");}
 function fightRoundSec(f){return (f.level||1)>=3?180:120;}
@@ -902,7 +906,7 @@ function prune(st){
  if(st.meas.length>200)st.meas=st.meas.slice(-200);
 }
 
-G.KL={EX:EX,TPL:TPL,BLOCKS:BLOCKS,BODY:BODY,EXTRAS:EXTRAS,AREAS:AREAS,RISK:RISK,normProfile:normProfile,goalLabel:goalLabel,resolveEx:resolveEx,areaChanges:areaChanges,FT:FT,FLEVELS:FLEVELS,COMBOS:COMBOS,defaultFight:defaultFight,ftAllowed:ftAllowed,fightPool:fightPool,techSay:techSay,comboSay:comboSay,comboShow:comboShow,fightDays:fightDays,isMainTpl:isMainTpl,buildFight:buildFight,COND:COND,isOlder:isOlder,FOOD:FOOD,foodSearch:foodSearch,foodCalc:foodCalc,foodTotals:foodTotals,EQ_LABEL:EQ_LABEL,normEq:normEq,emptyEq:emptyEq,gearFor:gearFor,fmtKg:fmtKg,REASONS:REASONS,REASON_FX:REASON_FX,recentMissed:recentMissed,weekStart:weekStart,weekReport:weekReport,dayAdd:dayAdd,PACES:PACES,WDN:WDN,SUPP_LIB:SUPP_LIB,WHEN:WHEN,
+G.KL={EX:EX,TPL:TPL,BLOCKS:BLOCKS,BODY:BODY,EXTRAS:EXTRAS,AREAS:AREAS,RISK:RISK,normProfile:normProfile,goalLabel:goalLabel,resolveEx:resolveEx,areaChanges:areaChanges,FT:FT,FLEVELS:FLEVELS,COMBOS:COMBOS,defaultFight:defaultFight,ftAllowed:ftAllowed,fightPool:fightPool,techSay:techSay,comboSay:comboSay,comboShow:comboShow,comboHint:comboHint,FT_HINT:FT_HINT,fightDays:fightDays,isMainTpl:isMainTpl,buildFight:buildFight,COND:COND,isOlder:isOlder,FOOD:FOOD,foodSearch:foodSearch,foodCalc:foodCalc,foodTotals:foodTotals,EQ_LABEL:EQ_LABEL,normEq:normEq,emptyEq:emptyEq,gearFor:gearFor,fmtKg:fmtKg,REASONS:REASONS,REASON_FX:REASON_FX,recentMissed:recentMissed,weekStart:weekStart,weekReport:weekReport,dayAdd:dayAdd,PACES:PACES,WDN:WDN,SUPP_LIB:SUPP_LIB,WHEN:WHEN,
  dkey:dkey,parseKey:parseKey,toMin:toMin,fmtMin:fmtMin,nowMin:nowMin,fmtDur:fmtDur,sleepDur:sleepDur,defaultState:defaultState,
  weeksSince:weeksSince,daysPerWeek:daysPerWeek,trainDays:trainDays,autoDays:autoDays,customDays:customDays,planSeq:planSeq,nextTpl:nextTpl,nutrition:nutrition,waterTarget:waterTarget,
  exTarget:exTarget,buildWorkout:buildWorkout,applyFeedback:applyFeedback,avgWake:avgWake,dayPlan:dayPlan,prune:prune,clamp:clamp};
@@ -1215,8 +1219,16 @@ function drawFig(c,t){
  if(A.db&&!c._nodb){g.strokeStyle=acc;g.lineWidth=2.2;g.beginPath();g.moveTo(p[6]-4,p[7]);g.lineTo(p[6]+4,p[7]);g.stroke();g.fillStyle=acc;g.fillRect(p[6]-6.5,p[7]-3.2,3,6.4);g.fillRect(p[6]+3.5,p[7]-3.2,3,6.4);}
 }
 const reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function playCombo(ids){
+ const c=document.querySelector("#player canvas.fig");if(!c)return;
+ c._seq=ids.map(function(id){return window.POSES[K.FT[id].pose];}).filter(Boolean);c._seqStart=performance.now();c._base=c._base||c._poses;
+}
 function animLoop(ts){
- figs.forEach(function(c){if(!c.isConnected){figs.delete(c);return;}const t=reduce?0:(1-Math.cos((ts/2600)*Math.PI*2))/2;drawFig(c,t);});
+ figs.forEach(function(c){if(!c.isConnected){figs.delete(c);return;}
+  if(c._seq){const i=Math.floor((ts-c._seqStart)/750);
+   if(i<c._seq.length&&i>=0){c._poses=c._seq[i];const fr=((ts-c._seqStart)%750)/750;drawFig(c,Math.sin(fr*Math.PI));return;}
+   c._seq=null;c._poses=window.POSES.f_stance;}
+  const t=reduce?0:(1-Math.cos((ts/2600)*Math.PI*2))/2;drawFig(c,t);});
  requestAnimationFrame(animLoop);
 }
 requestAnimationFrame(animLoop);
@@ -1450,7 +1462,7 @@ function viewFight(){
  h+='</div>';
  // level
  const L=f.level,ls=ftLevelStats(L);
- h+='<div class="card"><div class="row between"><h3>Уровень '+L+' из 4 · '+esc(K.FLEVELS[L].n)+'</h3><span class="pill acc num">'+ls.done+' / '+ls.all+'</span></div><div class="bar"><i style="width:'+Math.round(ls.done/ls.all*100)+'%"></i></div><p class="small muted">Нажми на приём, посмотри, как делать, потренируй перед зеркалом и отметь «Освоил».</p><div class="list">';
+ h+='<div class="card"><div class="row between"><h3>Уровень '+L+' из 4 · '+esc(K.FLEVELS[L].n)+'</h3><span class="pill acc num">'+ls.done+' / '+ls.all+'</span></div><div class="bar"><i style="width:'+Math.round(ls.done/ls.all*100)+'%"></i></div><p class="small muted">Нажми на приём, посмотри, как делать, потренируй перед зеркалом и отметь «Освоил». В бою с тенью тренер называет только отмеченные приёмы (джеб и прямой — сразу).</p><div class="list">';
  ls.ids.forEach(function(id){const t=K.FT[id];const on=!!f.learned[id];const ok=K.ftAllowed(id,st.profile);
   h+='<div class="li"><button class="check'+(on?" on":"")+'" data-act="ft-learn" data-v="'+id+'" aria-label="Освоил: '+esc(t.n)+'">'+(on?checkSvg():"")+'</button><button class="exrow" style="border:0;padding:0" data-act="ft-how" data-v="'+id+'"><span class="grow"><b>'+(t.num?t.num+" · ":"")+esc(t.n)+'</b>'+(ok?'':' <span class="pill bad">не сейчас</span>')+'<div class="small muted">'+esc(t.what)+'</div></span></button></div>';});
  h+='</div>';
@@ -1847,9 +1859,9 @@ function pick(a){return a[Math.floor(Math.random()*a.length)];}
 function fightCall(mode){
  const pool=K.fightPool(st);const f=st.fight;
  if(mode==="foot"){const d=pick(FOOT);return {say:d,show:d,gap:2500+Math.random()*1200};}
- if(mode==="single"&&pool.singles.length){const id=pick(pool.singles);return {say:K.techSay(id,f),show:K.comboShow([id]),gap:4200+Math.random()*1500};}
- if(mode==="combo"&&pool.combos.length){const c=pick(pool.combos);return {say:K.comboSay(c,f),show:K.comboShow(c),gap:2600+c.length*900+Math.random()*1500};}
- if(mode==="free"){if(Math.random()<0.5&&pool.combos.length){const c=pick(pool.combos);return {say:K.comboSay(c,f),show:K.comboShow(c),gap:6000+Math.random()*3000};}const t=pick(FREE_TIPS);return {say:t,show:t,gap:7000+Math.random()*4000};}
+ if(mode==="single"&&pool.singles.length){const id=pick(pool.singles);return {ids:[id],say:K.techSay(id,f),show:K.comboShow([id]),gap:4500+Math.random()*1500};}
+ if(mode==="combo"&&pool.combos.length){const c=pick(pool.combos);return {ids:c,say:K.comboSay(c,f),show:K.comboShow(c),gap:3200+c.length*1000+Math.random()*1500};}
+ if(mode==="free"){if(Math.random()<0.5&&pool.combos.length){const c=pick(pool.combos);return {ids:c,say:K.comboSay(c,f),show:K.comboShow(c),gap:6000+Math.random()*3000};}const t=pick(FREE_TIPS);return {say:t,show:t,gap:7000+Math.random()*4000};}
  return null;
 }
 function startRest(after,sec){P.after=after;say("Отдых "+sec+" секунд");startTimer("rest",sec);}
@@ -1882,7 +1894,7 @@ function onTick(){
  }
  if(P.phase==="run"){const ce=EX[cur().id];
   if(ce&&ce.call&&Date.now()>=(P.callNext||0)){const r2=remain();
-   if(r2>3&&[61,60,59,31,30,29,11,10,9].indexOf(r2)<0){const c=fightCall(ce.call);if(c){say(c.say);P.callTxt=c.show;const el=$("#pl-call");if(el)el.textContent=c.show;P.callNext=Date.now()+c.gap;}}
+   if(r2>3&&[61,60,59,31,30,29,11,10,9].indexOf(r2)<0){const c=fightCall(ce.call);if(c){say(c.say);P.callTxt=c.show;P.callHint=c.ids?K.comboHint(c.ids):"";const el=$("#pl-call");if(el)el.textContent=c.show;const hl=$("#pl-hint");if(hl)hl.textContent=P.callHint;if(c.ids)playCombo(c.ids);P.callNext=Date.now()+c.gap;}}
    else P.callNext=Date.now()+1500;}}
  if(Date.now()>=P.endAt)phaseDone();
 }
@@ -1963,10 +1975,11 @@ function drawPlayer(){
   h+='<div class="target"><div class="big num">'+s.val+'</div><div class="muted">'+plural(s.val,"повторение","повторения","повторений")+(s.sides>1?" на каждую сторону":"")+'</div></div>';
  } else if(P.phase==="ready"){
   h+='<div class="target"><div class="big num">'+fmtClock(s.val)+(s.val<60?" с":"")+'</div><div class="muted">'+(e.call?"раунд, тренер подсказывает голосом":s.sides>1?"на каждую сторону":"держать")+'</div></div>';
+  if(e.call&&e.call!=="foot"){const pl=K.fightPool(st);h+='<div class="card"><b>Удары в этом раунде</b><p class="small muted" style="margin:0">Тренер называет только их. Нажми, чтобы посмотреть, как делать.</p><div class="list">'+pl.singles.map(function(id){const t=K.FT[id];return '<button class="exrow" data-act="ft-how" data-v="'+id+'"><span class="grow"><b>'+esc(K.comboShow([id]))+'</b> <span class="small muted">— '+esc(K.FT_HINT[id]||"")+'</span></span></button>';}).join("")+'</div></div>';}
  } else {
   const lbl=P.phase==="count"?"Приготовься":P.phase==="switch"?"Смена стороны":e.call?"Работаем":(s.sides>1?(P.side===0?"Первая сторона":"Вторая сторона"):"Держи");
   h+='<p class="target"><b>'+lbl+'</b></p><div class="timer '+(P.phase==="run"?"run":"")+'" id="pl-time">'+fmtClock(remain())+'</div>';
-  if(e.call&&P.phase==="run")h+='<div class="target" id="pl-call" style="font-family:var(--f-display);font-weight:700;font-size:24px;min-height:32px;color:var(--accent)">'+esc(P.callTxt||"")+'</div>';
+  if(e.call&&P.phase==="run")h+='<div class="target" id="pl-call" style="font-family:var(--f-display);font-weight:700;font-size:24px;min-height:32px;color:var(--accent)">'+esc(P.callTxt||"")+'</div><p class="target small muted" id="pl-hint" style="min-height:20px;margin:0">'+esc(P.callHint||"")+'</p>';
  }
  h+='<details class="card"><summary>Как делать</summary><ol class="how" style="margin-top:8px">'+e.how.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+'</ol>'+(e.tip?'<div class="note small" style="margin-top:8px">'+esc(e.tip)+'</div>':'')+'</details>';
  if(e.sh&&hasArea("shoulder"))h+='<div class="note red small">Плечо: без боли. Больно — уменьши амплитуду или пропусти.</div>';
