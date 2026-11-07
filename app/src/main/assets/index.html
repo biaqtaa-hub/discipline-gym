@@ -733,13 +733,13 @@ const FT = {
  cross:{n:"Прямой задней рукой",num:2,lvl:1,type:"punch",pose:"f_cross",say:"прямой",what:"Самый сильный прямой удар. Чаще всего идёт сразу после джеба — «двойка», 1-2.",
   how:["Толкнись задней ногой, поверни заднее бедро и плечо вперёд, задняя пятка разворачивается наружу.","Выпрями заднюю руку прямо вперёд, кулак ладонью вниз.","Передняя рука в это время у подбородка.","Верни руку к лицу."],
   bad:["Бить одной рукой без поворота корпуса — удар слабый.","Тянуться за рукой и падать вперёд."]},
- hook:{n:"Хук передней рукой",num:3,lvl:2,type:"punch",pose:"f_hook",say:"хук",what:"Боковой удар по дуге в голову или корпус.",
+ hook:{n:"Хук передней рукой",num:3,lvl:2,type:"punch",pose:"f_hook",sayLead:"хук",what:"Боковой удар по дуге в голову или корпус.",
   how:["Согни переднюю руку примерно под прямым углом, локоть на уровне кулака.","Поверни корпус и переднюю ногу внутрь: сила идёт от ноги и бедра, а не от руки.","Кулак идёт по дуге, рука остаётся согнутой, как крюк.","Задняя рука у подбородка."],
   bad:["Широкий замах — удар видно заранее.","Бить только рукой без поворота корпуса."]},
  rhook:{n:"Хук задней рукой",num:4,lvl:2,type:"punch",pose:"f_rhook",sayRear:"хук",what:"Боковой удар задней рукой. Мощный, но его дольше видно — бей после других ударов.",
   how:["Согни заднюю руку, локоть на уровне кулака.","Разверни задние бедро и плечо вперёд, задняя пятка наружу.","Кулак идёт по дуге, рука согнута.","Передняя рука защищает лицо."],
   bad:["Начинать атаку с этого удара.","Разгибать руку в конце."]},
- upper:{n:"Апперкот передней рукой",num:5,lvl:3,type:"punch",pose:"f_upper",say:"апперкот",what:"Удар снизу вверх в подбородок или корпус. Хорош на ближней дистанции.",
+ upper:{n:"Апперкот передней рукой",num:5,lvl:3,type:"punch",pose:"f_upper",sayLead:"апперкот",what:"Удар снизу вверх в подбородок или корпус. Хорош на ближней дистанции.",
   how:["Чуть присядь и немного опусти переднее плечо.","Толкнись ногами вверх и поверни корпус.","Кулак идёт снизу вверх, ладонь к себе, рука согнута.","Сразу верни руку к лицу."],
   bad:["Большой замах вниз.","Выпрямлять руку."]},
  rupper:{n:"Апперкот задней рукой",num:6,lvl:3,type:"punch",pose:"f_rupper",sayRear:"апперкот",what:"Сильный удар снизу задней рукой.",
@@ -800,13 +800,20 @@ function fightPool(st){
  const combos=COMBOS.filter(function(c){return c[0]<=L&&c[1].every(ok);}).map(function(c){return c[1];});
  return {singles:singles,combos:combos};
 }
+const SIDE_END={"яя":"ая","ей":"ой","юю":"ую","ее":"ое","ими":"ыми","им":"ым","его":"ого","ие":"ые","ий":"ый","их":"ых","ему":"ому"};
+// "передняя/задняя" -> "левая/правая" by stance (right-hander: left side in front)
+function sideTxt(txt,f){
+ const south=f&&f.stance==="south";const L=south?"прав":"лев",R=south?"лев":"прав";
+ const sub=function(stem){return function(m,c,e){const w=stem+SIDE_END[e];return c===c.toUpperCase()?w[0].toUpperCase()+w.slice(1):w;};};
+ return String(txt).replace(/([Пп])ередн(яя|ей|юю|ее|ими|им|его|ие|ий|их|ему)/g,sub(L)).replace(/([Зз])адн(яя|ей|юю|ее|ими|им|его|ие|ий|их|ему)/g,sub(R));
+}
 function rearWord(f){return (f&&f.stance==="south")?"левый":"правый";}
-function techSay(id,f){const t=FT[id];return t.sayRear?rearWord(f)+" "+t.sayRear:t.say;}
+function techSay(id,f){const t=FT[id];return t.sayRear?rearWord(f)+" "+t.sayRear:t.sayLead?((f&&f.stance==="south")?"правый":"левый")+" "+t.sayLead:t.say;}
 function comboSay(ids,f){return ids.map(function(id){return techSay(id,f);}).join(", ");}
 const FT_HINT={jab:"прямой передней рукой",cross:"прямой задней рукой",hook:"боковой передней рукой",rhook:"боковой задней рукой",upper:"снизу вверх передней рукой",rupper:"снизу вверх задней рукой",block:"закрыть голову руками",slip:"убрать голову в сторону",duck:"присесть под удар",low:"задней ногой по бедру",teep:"толкнуть передней ногой",mid:"задней ногой по корпусу",knee:"коленом вперёд-вверх",elbow:"передним локтем вбок",check:"поднять колено, закрыться голенью"};
-function comboHint(ids){return ids.map(function(id){return FT_HINT[id]||"";}).join(" → ");}
-const FT_SHORT={jab:"джеб",cross:"прямой",hook:"хук",rhook:"задний хук",upper:"апперкот",rupper:"задний апперкот",block:"блок",slip:"уклон",duck:"нырок",low:"лоу-кик",teep:"тип",mid:"мидл-кик",knee:"колено",elbow:"локоть",check:"чек"};
-function comboShow(ids){return ids.map(function(id){const t=FT[id];return (t.num?t.num+" ":"")+(FT_SHORT[id]||t.n.toLowerCase());}).join(" · ");}
+function comboHint(ids,f){return sideTxt(ids.map(function(id){return FT_HINT[id]||"";}).join(" → "),f);}
+const FT_SHORT={jab:"джеб передней",cross:"прямой задней",hook:"передний хук",rhook:"задний хук",upper:"передний апперкот",rupper:"задний апперкот",block:"блок",slip:"уклон",duck:"нырок",low:"лоу-кик задней",teep:"тип передней",mid:"мидл-кик задней",knee:"заднее колено",elbow:"передний локоть",check:"чек передней"};
+function comboShow(ids,f){return sideTxt(ids.map(function(id){const t=FT[id];return (t.num?t.num+" ":"")+(FT_SHORT[id]||t.n.toLowerCase());}).join(" · "),f);}
 function fightRoundSec(f){return (f.level||1)>=3?180:120;}
 function fightDays(st){
  const f=st.fight;if(!f||!f.on||f.mode!=="rest")return [];
@@ -906,7 +913,7 @@ function prune(st){
  if(st.meas.length>200)st.meas=st.meas.slice(-200);
 }
 
-G.KL={EX:EX,TPL:TPL,BLOCKS:BLOCKS,BODY:BODY,EXTRAS:EXTRAS,AREAS:AREAS,RISK:RISK,normProfile:normProfile,goalLabel:goalLabel,resolveEx:resolveEx,areaChanges:areaChanges,FT:FT,FLEVELS:FLEVELS,COMBOS:COMBOS,defaultFight:defaultFight,ftAllowed:ftAllowed,fightPool:fightPool,techSay:techSay,comboSay:comboSay,comboShow:comboShow,comboHint:comboHint,FT_HINT:FT_HINT,fightDays:fightDays,isMainTpl:isMainTpl,buildFight:buildFight,COND:COND,isOlder:isOlder,FOOD:FOOD,foodSearch:foodSearch,foodCalc:foodCalc,foodTotals:foodTotals,EQ_LABEL:EQ_LABEL,normEq:normEq,emptyEq:emptyEq,gearFor:gearFor,fmtKg:fmtKg,REASONS:REASONS,REASON_FX:REASON_FX,recentMissed:recentMissed,weekStart:weekStart,weekReport:weekReport,dayAdd:dayAdd,PACES:PACES,WDN:WDN,SUPP_LIB:SUPP_LIB,WHEN:WHEN,
+G.KL={EX:EX,TPL:TPL,BLOCKS:BLOCKS,BODY:BODY,EXTRAS:EXTRAS,AREAS:AREAS,RISK:RISK,normProfile:normProfile,goalLabel:goalLabel,resolveEx:resolveEx,areaChanges:areaChanges,FT:FT,FLEVELS:FLEVELS,COMBOS:COMBOS,defaultFight:defaultFight,ftAllowed:ftAllowed,fightPool:fightPool,techSay:techSay,comboSay:comboSay,comboShow:comboShow,sideTxt:sideTxt,comboHint:comboHint,FT_HINT:FT_HINT,fightDays:fightDays,isMainTpl:isMainTpl,buildFight:buildFight,COND:COND,isOlder:isOlder,FOOD:FOOD,foodSearch:foodSearch,foodCalc:foodCalc,foodTotals:foodTotals,EQ_LABEL:EQ_LABEL,normEq:normEq,emptyEq:emptyEq,gearFor:gearFor,fmtKg:fmtKg,REASONS:REASONS,REASON_FX:REASON_FX,recentMissed:recentMissed,weekStart:weekStart,weekReport:weekReport,dayAdd:dayAdd,PACES:PACES,WDN:WDN,SUPP_LIB:SUPP_LIB,WHEN:WHEN,
  dkey:dkey,parseKey:parseKey,toMin:toMin,fmtMin:fmtMin,nowMin:nowMin,fmtDur:fmtDur,sleepDur:sleepDur,defaultState:defaultState,
  weeksSince:weeksSince,daysPerWeek:daysPerWeek,trainDays:trainDays,autoDays:autoDays,customDays:customDays,planSeq:planSeq,nextTpl:nextTpl,nutrition:nutrition,waterTarget:waterTarget,
  exTarget:exTarget,buildWorkout:buildWorkout,applyFeedback:applyFeedback,avgWake:avgWake,dayPlan:dayPlan,prune:prune,clamp:clamp};
@@ -978,26 +985,28 @@ G.POSES={
  revlunge:[{p:ST.slice(),l2:[60,73,60,91],db:1},{p:[56,31,56,41,57,54,58,67,56,68,68,76,66,91],l2:[48,88,36,91],db:1}],
  pike:[{p:[72,78,66,70,68,80,70,91,44,52,32,72,20,90]},{p:[70,86,64,78,58,82,70,91,44,54,32,72,20,90]}],
  pushknee:[{p:[87,68,78,72,78,82,78,91,52,80,40,91,28,84]},{p:[88,80,78,84,70,87,78,91,52,86,40,91,28,84]}],
- f_stance:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]},{p:[62,21,60,31,67,41,70,27,57,56,65,74,70,91],e2:[61,42,65,28],l2:[50,74,44,91]}],
- f_step:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]},{p:[68,20,66,30,73,40,76,26,63,55,71,73,76,91],e2:[67,42,71,28],l2:[56,73,50,91]}],
- f_jab:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]},{p:[63,21,61,30,77,28,90,27,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]}],
- f_cross:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]},{p:[64,21,61,30,67,38,69,25,58,55,65,73,70,91],e2:[74,29,90,28],l2:[51,73,45,90]}],
- f_hook:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]},{p:[61,21,60,30,74,29,83,25,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]}],
- f_rhook:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]},{p:[63,21,61,30,67,40,70,26,58,55,65,73,70,91],e2:[72,29,82,25],l2:[51,73,45,90]}],
- f_upper:[{p:[62,23,60,33,66,44,69,38,57,58,66,75,70,91],e2:[61,42,65,28],l2:[50,75,44,91]},{p:[62,19,60,29,70,38,76,24,57,54,65,72,70,91],e2:[61,42,65,28],l2:[50,73,44,91]}],
- f_rupper:[{p:[62,23,60,33,66,44,69,30,57,58,66,75,70,91],e2:[62,46,66,38],l2:[50,75,44,91]},{p:[63,19,61,29,67,40,70,26,58,54,65,72,70,91],e2:[68,40,75,24],l2:[51,72,45,90]}],
- f_block:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]},{p:[62,21,60,31,66,32,66,16,57,56,65,74,70,91],e2:[62,32,63,16],l2:[50,73,44,91]}],
- f_slip:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]},{p:[67,25,63,34,69,42,72,30,56,57,64,75,70,91],e2:[64,45,68,32],l2:[49,74,44,91]}],
- f_duck:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]},{p:[64,36,61,44,68,52,70,40,55,65,67,78,70,91],e2:[62,56,66,42],l2:[48,79,44,91]}],
- f_low:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]},{p:[54,22,55,32,62,40,66,26,56,55,58,73,60,91],e2:[48,40,40,48],l2:[70,64,86,72]}],
- f_mid:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]},{p:[52,24,54,33,61,41,65,27,56,56,58,73,60,91],e2:[47,41,39,49],l2:[72,52,90,50]}],
- f_teep:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]},{p:[59,20,58,30,65,40,68,26,58,57,72,58,88,60],e2:[59,42,63,28],l2:[52,73,48,91]}],
- f_knee:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]},{p:[64,20,62,30,72,32,80,26,60,56,64,73,66,91],e2:[70,34,80,28],l2:[72,58,64,74]}],
- f_elbow:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]},{p:[61,21,60,30,76,28,66,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]}],
- f_check:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91]},{p:[60,20,59,30,66,40,69,26,57,55,70,62,68,78],e2:[61,42,65,28],l2:[50,73,44,91]}],
+ f_stance:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка: передняя нога и передняя рука впереди, кулаки у подбородка"},{p:[62,21,60,31,67,41,70,27,57,56,65,74,70,91],e2:[61,42,65,28],l2:[50,74,44,91],cap:"Пружинь на носках, колени чуть согнуты"}],
+ f_step:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка"},{p:[63,20,61,30,68,40,71,26,59,55,70,73,76,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Шаг вперёд: первой идёт передняя нога"},{p:[68,20,66,30,73,40,76,26,63,55,71,73,76,91],e2:[67,42,71,28],l2:[56,73,50,91],cap:"Задняя подтянулась — стойка та же"},{p:[65,20,63,30,70,40,73,26,60,55,70,73,76,91],e2:[64,42,68,28],l2:[52,73,44,91],cap:"Шаг назад: первой идёт задняя нога"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Передняя подтянулась — снова стойка"}],
+ f_jab:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка, руки у подбородка"},{p:[63,21,61,30,77,28,90,27,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Передняя рука выстреливает прямо, кулак ладонью вниз"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Рука сразу вернулась к подбородку"}],
+ f_cross:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка"},{p:[63,20,61,30,67,39,69,25,58,55,65,73,70,91],e2:[68,33,78,30],l2:[51,73,46,90],cap:"Толчок задней ногой, бедро поворачивается вперёд"},{p:[64,21,61,30,67,38,69,25,58,55,65,73,70,91],e2:[74,29,90,28],l2:[52,73,46,89],cap:"Задняя рука прямо вперёд, передняя у подбородка"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Рука вернулась к лицу"}],
+ f_hook:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка"},{p:[62,20,60,30,70,31,73,24,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Передний локоть поднят до уровня кулака, рука согнута"},{p:[61,21,60,30,74,29,83,25,58,55,63,73,69,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Поворот корпуса и передней ноги — кулак идёт по дуге"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Рука вернулась к лицу"}],
+ f_rhook:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[68,32,72,25],l2:[50,73,44,91],cap:"Задний локоть поднят, рука согнута"},{p:[63,21,61,30,67,40,70,26,58,55,65,73,70,91],e2:[72,29,82,25],l2:[51,73,45,90],cap:"Разворот задней ноги и бедра — удар по дуге"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Рука вернулась к лицу"}],
+ f_upper:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка"},{p:[62,23,60,33,66,44,69,38,57,58,66,75,70,91],e2:[61,45,65,31],l2:[50,75,44,91],cap:"Чуть присядь, переднее плечо немного вниз"},{p:[62,19,60,29,70,38,76,24,57,54,65,72,70,91],e2:[61,42,65,28],l2:[50,72,44,91],cap:"Толчок ногами — передний кулак снизу вверх, ладонь к себе"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Рука вернулась к лицу"}],
+ f_rupper:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка"},{p:[62,23,60,33,66,44,69,30,57,58,66,75,70,91],e2:[62,46,66,38],l2:[50,75,44,91],cap:"Чуть присядь, задняя рука немного ниже"},{p:[63,19,61,29,67,40,70,26,58,54,65,72,70,91],e2:[68,40,75,24],l2:[51,72,45,90],cap:"Разворот задней ноги — задний кулак снизу вверх"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Рука вернулась к лицу"}],
+ f_block:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка"},{p:[62,21,60,31,66,32,66,16,57,56,65,74,70,91],e2:[62,32,63,16],l2:[50,74,44,91],cap:"Кулаки к вискам, локти прижаты — голова закрыта"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Снова стойка"}],
+ f_slip:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка"},{p:[67,25,63,34,69,42,72,30,56,57,64,75,70,91],e2:[64,45,68,32],l2:[49,74,44,91],cap:"Колени согнуты, голова ушла с линии удара"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Сразу в стойку — и отвечай ударом"}],
+ f_duck:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка"},{p:[64,32,61,40,68,49,70,37,56,62,66,76,70,91],e2:[62,52,66,39],l2:[49,77,44,91],cap:"Сгибай колени, голова уходит вниз"},{p:[64,36,61,44,68,52,70,40,55,65,67,78,70,91],e2:[62,56,66,42],l2:[48,79,44,91],cap:"Нижняя точка: спина ровная, смотришь вперёд"},{p:[60,30,58,39,65,48,68,35,55,61,64,76,70,91],e2:[59,51,63,37],l2:[49,76,44,91],cap:"Выходишь по дуге на другую сторону"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Снова стойка"}],
+ f_low:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка"},{p:[61,20,59,30,66,40,69,26,58,55,68,73,75,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Маленький шаг передней ногой чуть наружу"},{p:[57,21,57,31,63,40,67,26,57,55,62,73,64,91],e2:[52,40,46,46],l2:[62,66,72,78],cap:"Разворот на носке, задняя нога идёт по дуге"},{p:[54,22,55,32,62,40,66,26,56,55,58,73,60,91],e2:[48,40,40,48],l2:[70,64,86,72],cap:"Удар голенью по бедру, задняя рука уходит назад"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Нога вернулась в стойку"}],
+ f_mid:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка"},{p:[61,20,59,30,66,40,69,26,58,55,68,73,75,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Маленький шаг передней ногой чуть наружу"},{p:[55,22,56,32,62,41,66,27,57,55,61,73,63,91],e2:[51,41,45,47],l2:[64,60,76,66],cap:"Разворот на носке, задняя нога идёт вверх по дуге"},{p:[52,24,54,33,61,41,65,27,56,56,58,73,60,91],e2:[47,41,39,49],l2:[72,52,90,50],cap:"Удар голенью по корпусу"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Нога вернулась в стойку"}],
+ f_teep:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка"},{p:[61,20,59,30,66,40,69,26,57,56,68,62,68,78],e2:[61,42,65,28],l2:[52,73,48,91],cap:"Колено передней ноги к груди"},{p:[59,20,58,30,65,40,68,26,58,57,72,58,88,60],e2:[61,42,65,28],l2:[52,73,48,91],cap:"Толчок подушечкой стопы вперёд, на уровне живота"},{p:[61,20,59,30,66,40,69,26,57,56,68,62,68,78],e2:[61,42,65,28],l2:[52,73,48,91],cap:"Колено назад"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Нога вернулась в стойку"}],
+ f_knee:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка"},{p:[64,20,62,30,70,34,76,28,60,56,66,73,68,91],e2:[68,36,76,30],l2:[54,72,50,88],cap:"Руки вперёд, таз подаётся вперёд"},{p:[64,20,62,30,72,32,80,26,60,56,64,73,66,91],e2:[70,34,80,28],l2:[72,58,64,74],cap:"Заднее колено вперёд-вверх, носок вниз"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Нога вернулась в стойку"}],
+ f_elbow:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка"},{p:[62,20,60,30,70,27,64,25,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Передний локоть поднят до плеча, кулак у уха"},{p:[61,21,60,30,76,28,66,26,58,55,63,73,69,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Поворот корпуса — локоть идёт по дуге"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Рука вернулась к лицу"}],
+ f_check:[{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Стойка"},{p:[60,20,59,30,66,40,69,26,57,55,70,62,68,78],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Переднее колено вверх и наружу, голень вертикально"},{p:[62,20,60,30,67,40,70,26,57,55,65,73,70,91],e2:[61,42,65,28],l2:[50,73,44,91],cap:"Нога вернулась в стойку"}],
  rope:[{p:[60,18,60,28,66,44,70,54,60,55,60,73,60,91]},{p:[60,14,60,24,66,40,70,50,60,51,60,69,61,87]}],
  cobra:[{p:[72,82,63,86,64,91,72,91,42,90,26,91,10,91]},{p:[73,64,66,72,66,82,68,91,42,90,26,91,10,91]}]
 };
+// Which limb strikes: drawn in the accent colour
+(function(){const H={f_jab:"arm",f_cross:"e2",f_hook:"arm",f_rhook:"e2",f_upper:"arm",f_rupper:"e2",f_elbow:"arm",f_low:"l2",f_mid:"l2",f_knee:"l2",f_teep:"leg",f_check:"leg"};Object.keys(H).forEach(function(k){if(G.POSES[k])G.POSES[k].hl=H[k];});})();
 })(typeof window!=="undefined"?window:globalThis);
 </script>
 
@@ -1184,14 +1193,16 @@ try{if(window.speechSynthesis)window.speechSynthesis.onvoiceschanged=function(){
 function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()||"#888";}
 function lerpArr(a,b,t){if(!a&&!b)return null;a=a||b;b=b||a;return a.map(function(v,i){return v+(b[i]-v)*t;});}
 const figs=new Set();
+function figCaps(poses){return poses.map(function(p,i){return p.cap?K.sideTxt(p.cap,st.fight):(poses.length===2?(i===0?"Исходное положение":"Конечное положение"):"");});}
 function mountFig(canvas,poseName){
+ if(canvas.dataset.ctl==="1")canvas._ctl={play:true,speed:1,pos:0,last:null};
  canvas._nodb=canvas.dataset.nodb==="1";
  const poses=window.POSES[poseName]||window.POSES.march;
  canvas._poses=poses;figs.add(canvas);drawFig(canvas,0);
 }
-function drawFig(c,t){
+function drawFig(c,t,ia,ib){
  const poses=c._poses;if(!poses)return;
- const A=poses[0],B=poses[1]||poses[0];
+ const A=poses[ia||0]||poses[0],B=poses[ib==null?1:ib]||A;
  const dpr=window.devicePixelRatio||1;const w=c.clientWidth||300,h=c.clientHeight||250;
  if(c.width!==Math.round(w*dpr)){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);}
  const g=c.getContext("2d");g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,c.width,c.height);
@@ -1215,6 +1226,12 @@ function drawFig(c,t){
  seg([p[0],p[1],p[2],p[3]],fig,3.4);
  g.fillStyle=cssv("--surface");g.strokeStyle=fig;g.lineWidth=3;g.beginPath();g.arc(p[0],p[1],5.6,0,Math.PI*2);g.fill();g.stroke();
  seg([p[2],p[3],p[4],p[5],p[6],p[7]],fig,3.8);
+ const hl=poses.hl;
+ if(hl){const hc=acc;
+  if(hl==="arm")seg([p[2],p[3],p[4],p[5],p[6],p[7]],hc,4.6);
+  else if(hl==="leg")seg([p[8],p[9],p[10],p[11],p[12],p[13]],hc,5.2);
+  else if(hl==="e2"&&e2)seg([p[2],p[3],e2[0],e2[1],e2[2],e2[3]],hc,4.6);
+  else if(hl==="l2"&&l2)seg([p[8],p[9],l2[0],l2[1],l2[2],l2[3]],hc,5.2);}
  if(A.bandFeet){g.strokeStyle=en;g.lineWidth=1.6;g.beginPath();g.moveTo(p[6],p[7]);g.lineTo(p[12]+2,p[13]);g.stroke();}
  if(A.db&&!c._nodb){g.strokeStyle=acc;g.lineWidth=2.2;g.beginPath();g.moveTo(p[6]-4,p[7]);g.lineTo(p[6]+4,p[7]);g.stroke();g.fillStyle=acc;g.fillRect(p[6]-6.5,p[7]-3.2,3,6.4);g.fillRect(p[6]+3.5,p[7]-3.2,3,6.4);}
 }
@@ -1226,8 +1243,16 @@ function playCombo(ids){
 function animLoop(ts){
  figs.forEach(function(c){if(!c.isConnected){figs.delete(c);return;}
   if(c._seq){const i=Math.floor((ts-c._seqStart)/750);
-   if(i<c._seq.length&&i>=0){c._poses=c._seq[i];const fr=((ts-c._seqStart)%750)/750;drawFig(c,Math.sin(fr*Math.PI));return;}
+   if(i<c._seq.length&&i>=0){c._poses=c._seq[i];const fr=((ts-c._seqStart)%750)/750;const hit=Math.max(1,c._poses.length-2);drawFig(c,Math.sin(fr*Math.PI),0,hit);return;}
    c._seq=null;c._poses=window.POSES.f_stance;}
+  const n=c._poses.length,per=1100;
+  const ease=function(fr){const x=Math.min(1,fr*1.5);return x<0.5?2*x*x:1-Math.pow(-2*x+2,2)/2;};
+  if(c._ctl){const C=c._ctl;if(C.last==null)C.last=ts;if(C.play&&!reduce)C.pos+=(ts-C.last)/per*C.speed;C.last=ts;
+   const seg=((Math.floor(C.pos)%n)+n)%n,fr=C.play?C.pos-Math.floor(C.pos):0,nx=(seg+1)%n;
+   drawFig(c,ease(fr),seg,nx);
+   const caps=figCaps(c._poses);const cap=C.play?caps[nx]:caps[seg];const el=document.getElementById("fig-cap");
+   if(el&&el.textContent!==cap)el.textContent=cap||"";return;}
+  if(n>2){const pos=ts/per,seg=Math.floor(pos)%n;drawFig(c,reduce?0:ease(pos-Math.floor(pos)),seg,(seg+1)%n);return;}
   const t=reduce?0:(1-Math.cos((ts/2600)*Math.PI*2))/2;drawFig(c,t);});
  requestAnimationFrame(animLoop);
 }
@@ -1464,15 +1489,15 @@ function viewFight(){
  const L=f.level,ls=ftLevelStats(L);
  h+='<div class="card"><div class="row between"><h3>Уровень '+L+' из 4 · '+esc(K.FLEVELS[L].n)+'</h3><span class="pill acc num">'+ls.done+' / '+ls.all+'</span></div><div class="bar"><i style="width:'+Math.round(ls.done/ls.all*100)+'%"></i></div><p class="small muted">Нажми на приём, посмотри, как делать, потренируй перед зеркалом и отметь «Освоил». В бою с тенью тренер называет только отмеченные приёмы (джеб и прямой — сразу).</p><div class="list">';
  ls.ids.forEach(function(id){const t=K.FT[id];const on=!!f.learned[id];const ok=K.ftAllowed(id,st.profile);
-  h+='<div class="li"><button class="check'+(on?" on":"")+'" data-act="ft-learn" data-v="'+id+'" aria-label="Освоил: '+esc(t.n)+'">'+(on?checkSvg():"")+'</button><button class="exrow" style="border:0;padding:0" data-act="ft-how" data-v="'+id+'"><span class="grow"><b>'+(t.num?t.num+" · ":"")+esc(t.n)+'</b>'+(ok?'':' <span class="pill bad">не сейчас</span>')+'<div class="small muted">'+esc(t.what)+'</div></span></button></div>';});
+  h+='<div class="li"><button class="check'+(on?" on":"")+'" data-act="ft-learn" data-v="'+id+'" aria-label="Освоил: '+esc(t.n)+'">'+(on?checkSvg():"")+'</button><button class="exrow" style="border:0;padding:0" data-act="ft-how" data-v="'+id+'"><span class="grow"><b>'+(t.num?t.num+" · ":"")+esc(K.sideTxt(t.n,f))+'</b>'+(ok?'':' <span class="pill bad">не сейчас</span>')+'<div class="small muted">'+esc(K.sideTxt(t.what,f))+'</div></span></button></div>';});
  h+='</div>';
  if(ls.done>=ls.all&&L<4)h+='<button class="btn energy block" data-act="ft-level" data-v="'+(L+1)+'">Открыть уровень '+(L+1)+': '+esc(K.FLEVELS[L+1].n)+'</button>';
  else if(L<4)h+='<p class="small muted">Отметь все приёмы этого уровня — откроется следующий. Удары следующих уровней в бою с тенью пока не появятся.</p>';
- if(L>1)h+='<details><summary class="small">Прошлые уровни</summary><div class="list" style="margin-top:6px">'+[1,2,3].filter(function(x){return x<L;}).map(function(x){return K.FLEVELS[x].ids.map(function(id){const t=K.FT[id];return '<button class="exrow" data-act="ft-how" data-v="'+id+'"><span class="blk">Ур. '+x+'</span><span class="grow">'+(t.num?t.num+" · ":"")+esc(t.n)+'</span></button>';}).join("");}).join("")+'</div></details>';
+ if(L>1)h+='<details><summary class="small">Прошлые уровни</summary><div class="list" style="margin-top:6px">'+[1,2,3].filter(function(x){return x<L;}).map(function(x){return K.FLEVELS[x].ids.map(function(id){const t=K.FT[id];return '<button class="exrow" data-act="ft-how" data-v="'+id+'"><span class="blk">Ур. '+x+'</span><span class="grow">'+(t.num?t.num+" · ":"")+esc(K.sideTxt(t.n,f))+'</span></button>';}).join("");}).join("")+'</div></details>';
  h+='</div>';
  // combos
  const pool=K.fightPool(st);
- if(pool.combos.length)h+='<div class="card"><h3>Комбинации твоего уровня</h3><p class="small muted">Цифры — номера ударов руками, как у боксёров: 1 джеб, 2 прямой, 3 хук, 4 задний хук, 5 и 6 апперкоты.</p><div class="list">'+pool.combos.map(function(c){return '<div class="li small"><div class="grow"><b>'+esc(K.comboShow(c))+'</b></div></div>';}).join("")+'</div></div>';
+ if(pool.combos.length)h+='<div class="card"><h3>Комбинации твоего уровня</h3><p class="small muted">'+esc(K.sideTxt("Цифры — номера ударов руками, как у боксёров: 1 джеб передней рукой, 2 прямой задней, 3 хук передней, 4 хук задней, 5 и 6 апперкоты передней и задней.",st.fight))+'</p><div class="list">'+pool.combos.map(function(c){return '<div class="li small"><div class="grow"><b>'+esc(K.comboShow(c,st.fight))+'</b><div class="small muted">'+esc(K.comboHint(c,st.fight))+'</div></div></div>';}).join("")+'</div></div>';
  // settings
  if(f.on){
   h+='<div class="card"><h3>Как совмещать с силовыми</h3><div class="chips"><button class="chip'+(f.mode==="rest"?" on":"")+'" data-act="fight-mode" data-v="rest">В дни отдыха</button><button class="chip'+(f.mode==="after"?" on":"")+'" data-act="fight-mode" data-v="after">После силовой</button></div>';
@@ -1484,8 +1509,9 @@ function viewFight(){
  return h+'</div>';
 }
 function ftHowHtml(id){
- const t=K.FT[id],on=!!st.fight.learned[id];
- let h='<div class="row between"><h2>'+(t.num?t.num+" · ":"")+esc(t.n)+'</h2>'+ICON_CLOSE+'</div><canvas class="fig" data-pose="'+t.pose+'" data-nodb="1"></canvas><p>'+esc(t.what)+'</p><ol class="how">'+t.how.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ol><div class="note small"><b>Ошибки:</b> '+t.bad.map(esc).join(" ")+'</div>';
+ const t=K.FT[id],on=!!st.fight.learned[id],f=st.fight,S=function(x){return esc(K.sideTxt(x,f));};
+ const q=t.n.replace(/ \(.*\)/,"")+(t.type==="kick"||t.type==="kickdef"||t.type==="elbow"?" тайский бокс":" бокс")+" техника для начинающих";
+ let h='<div class="row between"><h2>'+(t.num?t.num+" · ":"")+S(t.n)+'</h2>'+ICON_CLOSE+'</div>'+figPlayer(t.pose,true)+(window.POSES[t.pose]&&window.POSES[t.pose].hl?'<p class="small muted target" style="margin:0">Синим — рука или нога, которой бьёшь.</p>':'')+'<p>'+S(t.what)+'</p><ol class="how">'+t.how.map(function(x){return '<li>'+S(x)+'</li>';}).join("")+'</ol><div class="note small"><b>Ошибки:</b> '+t.bad.map(S).join(" ")+'</div>'+videoLink(q);
  if(!K.ftAllowed(id,st.profile))h+='<div class="note red small">С твоими больными местами этот приём пока лучше не делать. В бою с тенью тренер его не называет.</div>';
  h+='<button class="btn '+(on?"":"primary ")+'block" data-act="ft-learn" data-v="'+id+'" data-close="1">'+(on?"Отметить: ещё учу":"Освоил ✓")+'</button>';
  return h;
@@ -1688,13 +1714,18 @@ function lvlHtml(){
 function openSheet(html){$("#sheet-body").innerHTML=html;$("#sheet").hidden=false;$("#sheet-body").querySelectorAll("canvas[data-pose]").forEach(function(c){mountFig(c,c.dataset.pose);});}
 function closeSheet(){$("#sheet").hidden=true;$("#sheet-body").innerHTML="";}
 $("#sheet").addEventListener("click",function(e){if(e.target.id==="sheet")closeSheet();});
+function videoLink(q){return '<a class="btn ghost block" href="https://www.youtube.com/results?search_query='+encodeURIComponent(q)+'" target="_blank" rel="noopener">Смотреть видео на YouTube</a><p class="small muted" style="margin:0">Откроется поиск видео — выбери ролик с понятным объяснением.</p>';}
+function figPlayer(pose,nodb){
+ return '<canvas class="fig" id="fig-main" data-pose="'+pose+'" data-ctl="1"'+(nodb?' data-nodb="1"':'')+'></canvas><p class="target" id="fig-cap" style="min-height:44px;margin:0;font-weight:700"></p><div class="row" style="justify-content:center;flex-wrap:nowrap"><button class="iconbtn" data-act="fig-prev" aria-label="Предыдущий шаг"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button><button class="btn small" data-act="fig-play" id="fig-play" style="min-width:110px">Пауза</button><button class="iconbtn" data-act="fig-next" aria-label="Следующий шаг"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button><button class="chip" data-act="fig-speed" id="fig-speed">Медленно</button></div>';
+}
 function howtoHtml(id){
  const e=EX[id];const gear=K.gearFor(id,st.profile);
  let h='<div class="row between"><h2>'+esc(e.n)+'</h2><button class="iconbtn" data-act="sheet-close" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>';
- h+=(gear?'<div><span class="pill acc">'+esc(gear)+'</span></div>':'')+'<canvas class="fig" '+figAttr(e.pose,gear)+'></canvas><p class="small muted">Работают: '+esc(e.m)+' · '+esc(e.eq)+(e.s>1?" · на каждую сторону":"")+'</p><ol class="how">';
+ h+=(gear?'<div><span class="pill acc">'+esc(gear)+'</span></div>':'')+figPlayer(e.pose,!(gear&&gear.indexOf("Гантель")===0))+'<p class="small muted">Работают: '+esc(e.m)+' · '+esc(e.eq)+(e.s>1?" · на каждую сторону":"")+'</p><ol class="how">';
  e.how.forEach(function(x){h+='<li>'+esc(x)+'</li>';});
  h+='</ol>';
  if(e.tip)h+='<div class="note">'+esc(e.tip)+'</div>';
+ h+=videoLink(e.n.replace(/^Бой с тенью: .*/,"бой с тенью для начинающих")+" техника выполнения");
  if(e.neck)h+='<div class="note">Шею качают плавно, без рывков. Если появилась головная боль или «прострел» — остановись.</div>';
  if(e.sh&&hasArea("shoulder"))h+='<div class="note red">Плечо: делай без боли. Если больно — уменьши амплитуду или пропусти.</div>';
  return h;
@@ -1803,6 +1834,9 @@ document.addEventListener("click",function(ev){
   case "ft-how":openSheet(ftHowHtml(b.dataset.v));break;
   case "ft-learn":{const id=b.dataset.v;st.fight.learned[id]=!st.fight.learned[id];save();if(b.dataset.close)closeSheet();render();break;}
   case "ft-level":st.fight.level=Math.min(4,+b.dataset.v);save();render();window.scrollTo(0,0);toast("Открыт уровень "+st.fight.level);break;
+  case "fig-play":{const c=document.getElementById("fig-main");if(c&&c._ctl){c._ctl.play=!c._ctl.play;if(!c._ctl.play)c._ctl.pos=Math.round(c._ctl.pos);b.textContent=c._ctl.play?"Пауза":"Играть";}break;}
+  case "fig-prev":case "fig-next":{const c=document.getElementById("fig-main");if(c&&c._ctl){c._ctl.play=false;c._ctl.pos=Math.round(c._ctl.pos)+(a==="fig-next"?1:-1);const pb=document.getElementById("fig-play");if(pb)pb.textContent="Играть";}break;}
+  case "fig-speed":{const c=document.getElementById("fig-main");if(c&&c._ctl){c._ctl.speed=c._ctl.speed===1?0.4:1;b.classList.toggle("on",c._ctl.speed<1);}break;}
   case "food-day":foodDay=+b.dataset.v;render();break;
   case "body":if(wz)wzRead();st.profile.body=st.profile.body===b.dataset.v?null:b.dataset.v;st.profile.checked=true;save();render();break;
   case "extra":{const g=b.dataset.v;st.profile[g]=!st.profile[g];st.profile.checked=true;save();render();break;}
@@ -1859,9 +1893,9 @@ function pick(a){return a[Math.floor(Math.random()*a.length)];}
 function fightCall(mode){
  const pool=K.fightPool(st);const f=st.fight;
  if(mode==="foot"){const d=pick(FOOT);return {say:d,show:d,gap:2500+Math.random()*1200};}
- if(mode==="single"&&pool.singles.length){const id=pick(pool.singles);return {ids:[id],say:K.techSay(id,f),show:K.comboShow([id]),gap:4500+Math.random()*1500};}
- if(mode==="combo"&&pool.combos.length){const c=pick(pool.combos);return {ids:c,say:K.comboSay(c,f),show:K.comboShow(c),gap:3200+c.length*1000+Math.random()*1500};}
- if(mode==="free"){if(Math.random()<0.5&&pool.combos.length){const c=pick(pool.combos);return {ids:c,say:K.comboSay(c,f),show:K.comboShow(c),gap:6000+Math.random()*3000};}const t=pick(FREE_TIPS);return {say:t,show:t,gap:7000+Math.random()*4000};}
+ if(mode==="single"&&pool.singles.length){const id=pick(pool.singles);return {ids:[id],say:K.techSay(id,f),show:K.comboShow([id],f),gap:4500+Math.random()*1500};}
+ if(mode==="combo"&&pool.combos.length){const c=pick(pool.combos);return {ids:c,say:K.comboSay(c,f),show:K.comboShow(c,f),gap:3200+c.length*1000+Math.random()*1500};}
+ if(mode==="free"){if(Math.random()<0.5&&pool.combos.length){const c=pick(pool.combos);return {ids:c,say:K.comboSay(c,f),show:K.comboShow(c,f),gap:6000+Math.random()*3000};}const t=pick(FREE_TIPS);return {say:t,show:t,gap:7000+Math.random()*4000};}
  return null;
 }
 function startRest(after,sec){P.after=after;say("Отдых "+sec+" секунд");startTimer("rest",sec);}
@@ -1894,7 +1928,7 @@ function onTick(){
  }
  if(P.phase==="run"){const ce=EX[cur().id];
   if(ce&&ce.call&&Date.now()>=(P.callNext||0)){const r2=remain();
-   if(r2>3&&[61,60,59,31,30,29,11,10,9].indexOf(r2)<0){const c=fightCall(ce.call);if(c){say(c.say);P.callTxt=c.show;P.callHint=c.ids?K.comboHint(c.ids):"";const el=$("#pl-call");if(el)el.textContent=c.show;const hl=$("#pl-hint");if(hl)hl.textContent=P.callHint;if(c.ids)playCombo(c.ids);P.callNext=Date.now()+c.gap;}}
+   if(r2>3&&[61,60,59,31,30,29,11,10,9].indexOf(r2)<0){const c=fightCall(ce.call);if(c){say(c.say);P.callTxt=c.show;P.callHint=c.ids?K.comboHint(c.ids,st.fight):"";const el=$("#pl-call");if(el)el.textContent=c.show;const hl=$("#pl-hint");if(hl)hl.textContent=P.callHint;if(c.ids)playCombo(c.ids);P.callNext=Date.now()+c.gap;}}
    else P.callNext=Date.now()+1500;}}
  if(Date.now()>=P.endAt)phaseDone();
 }
@@ -1975,13 +2009,13 @@ function drawPlayer(){
   h+='<div class="target"><div class="big num">'+s.val+'</div><div class="muted">'+plural(s.val,"повторение","повторения","повторений")+(s.sides>1?" на каждую сторону":"")+'</div></div>';
  } else if(P.phase==="ready"){
   h+='<div class="target"><div class="big num">'+fmtClock(s.val)+(s.val<60?" с":"")+'</div><div class="muted">'+(e.call?"раунд, тренер подсказывает голосом":s.sides>1?"на каждую сторону":"держать")+'</div></div>';
-  if(e.call&&e.call!=="foot"){const pl=K.fightPool(st);h+='<div class="card"><b>Удары в этом раунде</b><p class="small muted" style="margin:0">Тренер называет только их. Нажми, чтобы посмотреть, как делать.</p><div class="list">'+pl.singles.map(function(id){const t=K.FT[id];return '<button class="exrow" data-act="ft-how" data-v="'+id+'"><span class="grow"><b>'+esc(K.comboShow([id]))+'</b> <span class="small muted">— '+esc(K.FT_HINT[id]||"")+'</span></span></button>';}).join("")+'</div></div>';}
+  if(e.call&&e.call!=="foot"){const pl=K.fightPool(st);h+='<div class="card"><b>Удары в этом раунде</b><p class="small muted" style="margin:0">Тренер называет только их. Нажми, чтобы посмотреть, как делать.</p><div class="list">'+pl.singles.map(function(id){const t=K.FT[id];return '<button class="exrow" data-act="ft-how" data-v="'+id+'"><span class="grow"><b>'+esc(K.comboShow([id],st.fight))+'</b> <span class="small muted">— '+esc(K.sideTxt(K.FT_HINT[id]||"",st.fight))+'</span></span></button>';}).join("")+'</div></div>';}
  } else {
   const lbl=P.phase==="count"?"Приготовься":P.phase==="switch"?"Смена стороны":e.call?"Работаем":(s.sides>1?(P.side===0?"Первая сторона":"Вторая сторона"):"Держи");
   h+='<p class="target"><b>'+lbl+'</b></p><div class="timer '+(P.phase==="run"?"run":"")+'" id="pl-time">'+fmtClock(remain())+'</div>';
   if(e.call&&P.phase==="run")h+='<div class="target" id="pl-call" style="font-family:var(--f-display);font-weight:700;font-size:24px;min-height:32px;color:var(--accent)">'+esc(P.callTxt||"")+'</div><p class="target small muted" id="pl-hint" style="min-height:20px;margin:0">'+esc(P.callHint||"")+'</p>';
  }
- h+='<details class="card"><summary>Как делать</summary><ol class="how" style="margin-top:8px">'+e.how.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+'</ol>'+(e.tip?'<div class="note small" style="margin-top:8px">'+esc(e.tip)+'</div>':'')+'</details>';
+ h+='<details class="card"><summary>Как делать</summary><ol class="how" style="margin-top:8px">'+e.how.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+'</ol>'+(e.tip?'<div class="note small" style="margin-top:8px">'+esc(e.tip)+'</div>':'')+'<button class="btn small block" style="margin-top:8px" data-act="howto" data-id="'+s.id+'">Анимация по шагам и видео</button></details>';
  if(e.sh&&hasArea("shoulder"))h+='<div class="note red small">Плечо: без боли. Больно — уменьши амплитуду или пропусти.</div>';
  h+='<div class="pl-actions">';
  if(s.k==="reps")h+='<button class="btn primary block" data-pl="set-done">Сделал подход ✓</button>';
