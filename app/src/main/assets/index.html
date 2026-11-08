@@ -228,7 +228,7 @@ const EX = {
  s_child:{n:"Поза ребёнка",k:"time",t:40,eq:"коврик",m:"спина, таз",pose:"child",how:["Сядь на пятки, колени чуть шире.","Наклонись вперёд, руки вытяни перед собой.","Расслабься и дыши животом."]},
  s_pigeon:{n:"Голубь (ягодицы)",k:"time",t:30,s:2,eq:"коврик",m:"ягодицы, таз",pose:"pigeon",how:["Из упора на руках выведи одну ногу вперёд и положи голень на пол поперёк.","Вторая нога вытянута назад.","Наклонись вперёд. Если тяжело, делай лёжа на спине: лодыжку одной ноги на колено другой."]},
  s_neck:{n:"Растяжка шеи вбок",k:"time",t:20,s:2,eq:"без инвентаря",m:"шея",pose:"sneck",how:["Сиди ровно, наклони ухо к плечу.","Рукой можно чуть добавить вес, не тянуть.","Другое плечо опущено вниз."]},
- s_shoulder:{n:"Растяжка плеча рукой",k:"time",t:20,s:2,sh:1,eq:"без инвентаря",m:"задняя часть плеча",pose:"sshoulder",how:["Прямую руку заведи поперёк груди.","Другой рукой мягко прижми её к себе выше локтя.","Плечо не поднимай. Только мягкое натяжение."]},
+ s_shoulder:{n:"Растяжка плеча рукой",k:"time",t:20,s:2,sh:1,eq:"без инвентаря",m:"задняя часть плеча",pose:"sshoulder",how:["Вытяни руку прямо перед собой на уровне груди.","Переведи её через грудь в другую сторону — рука прямая, ладонь смотрит назад.","Другой рукой обхвати её чуть выше локтя и мягко прижми к груди.","Плечо не поднимай к уху. Тянется задняя часть плеча — мягко, без боли. Потом другая рука."]},
  s_cobra:{n:"Кобра",k:"time",t:30,eq:"коврик",m:"пресс, спина",pose:"cobra",how:["Ляг на живот, ладони под плечами.","Мягко выпрями руки, поднимая грудь. Таз на полу.","Плечи вниз от ушей. Если тянет поясницу, поднимайся меньше."]}
 };
 
@@ -1250,7 +1250,7 @@ function animLoop(ts){
   if(c._ctl){const C=c._ctl;if(C.last==null)C.last=ts;if(C.play&&!reduce)C.pos+=(ts-C.last)/per*C.speed;C.last=ts;
    const seg=((Math.floor(C.pos)%n)+n)%n,fr=C.play?C.pos-Math.floor(C.pos):0,nx=(seg+1)%n;
    drawFig(c,ease(fr),seg,nx);
-   const caps=figCaps(c._poses);const cap=C.play?caps[nx]:caps[seg];const el=document.getElementById("fig-cap");
+   const caps=figCaps(c._poses);const cap=C.play?caps[nx]:caps[seg];const el=document.getElementById((c.id||"fig-main")+"-cap");
    if(el&&el.textContent!==cap)el.textContent=cap||"";return;}
   if(n>2){const pos=ts/per,seg=Math.floor(pos)%n;drawFig(c,reduce?0:ease(pos-Math.floor(pos)),seg,(seg+1)%n);return;}
   const t=reduce?0:(1-Math.cos((ts/2600)*Math.PI*2))/2;drawFig(c,t);});
@@ -1715,8 +1715,10 @@ function openSheet(html){$("#sheet-body").innerHTML=html;$("#sheet").hidden=fals
 function closeSheet(){$("#sheet").hidden=true;$("#sheet-body").innerHTML="";}
 $("#sheet").addEventListener("click",function(e){if(e.target.id==="sheet")closeSheet();});
 function videoLink(q){return '<a class="btn ghost block" href="https://www.youtube.com/results?search_query='+encodeURIComponent(q)+'" target="_blank" rel="noopener">Смотреть видео на YouTube</a><p class="small muted" style="margin:0">Откроется поиск видео — выбери ролик с понятным объяснением.</p>';}
-function figPlayer(pose,nodb){
- return '<canvas class="fig" id="fig-main" data-pose="'+pose+'" data-ctl="1"'+(nodb?' data-nodb="1"':'')+'></canvas><p class="target" id="fig-cap" style="min-height:44px;margin:0;font-weight:700"></p><div class="row" style="justify-content:center;flex-wrap:nowrap"><button class="iconbtn" data-act="fig-prev" aria-label="Предыдущий шаг"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button><button class="btn small" data-act="fig-play" id="fig-play" style="min-width:110px">Пауза</button><button class="iconbtn" data-act="fig-next" aria-label="Следующий шаг"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button><button class="chip" data-act="fig-speed" id="fig-speed">Медленно</button></div>';
+function figPlayer(pose,nodb,fid){
+ fid=fid||"fig-main";
+ const ic=function(d){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg>';};
+ return '<canvas class="fig" id="'+fid+'" data-pose="'+pose+'" data-ctl="1"'+(nodb?' data-nodb="1"':'')+'></canvas><p class="target" id="'+fid+'-cap" style="min-height:44px;margin:0;font-weight:700"></p><div class="row" style="justify-content:center;flex-wrap:nowrap"><button class="iconbtn" data-act="fig-prev" data-fig="'+fid+'" aria-label="Предыдущий шаг">'+ic("M15 6l-6 6 6 6")+'</button><button class="btn small" data-act="fig-play" data-fig="'+fid+'" id="'+fid+'-play" style="min-width:110px">Пауза</button><button class="iconbtn" data-act="fig-next" data-fig="'+fid+'" aria-label="Следующий шаг">'+ic("M9 6l6 6-6 6")+'</button><button class="chip" data-act="fig-speed" data-fig="'+fid+'">Медленно</button></div>';
 }
 function howtoHtml(id){
  const e=EX[id];const gear=K.gearFor(id,st.profile);
@@ -1834,9 +1836,9 @@ document.addEventListener("click",function(ev){
   case "ft-how":openSheet(ftHowHtml(b.dataset.v));break;
   case "ft-learn":{const id=b.dataset.v;st.fight.learned[id]=!st.fight.learned[id];save();if(b.dataset.close)closeSheet();render();break;}
   case "ft-level":st.fight.level=Math.min(4,+b.dataset.v);save();render();window.scrollTo(0,0);toast("Открыт уровень "+st.fight.level);break;
-  case "fig-play":{const c=document.getElementById("fig-main");if(c&&c._ctl){c._ctl.play=!c._ctl.play;if(!c._ctl.play)c._ctl.pos=Math.round(c._ctl.pos);b.textContent=c._ctl.play?"Пауза":"Играть";}break;}
-  case "fig-prev":case "fig-next":{const c=document.getElementById("fig-main");if(c&&c._ctl){c._ctl.play=false;c._ctl.pos=Math.round(c._ctl.pos)+(a==="fig-next"?1:-1);const pb=document.getElementById("fig-play");if(pb)pb.textContent="Играть";}break;}
-  case "fig-speed":{const c=document.getElementById("fig-main");if(c&&c._ctl){c._ctl.speed=c._ctl.speed===1?0.4:1;b.classList.toggle("on",c._ctl.speed<1);}break;}
+  case "fig-play":{const c=document.getElementById(b.dataset.fig||"fig-main");if(c&&c._ctl){c._ctl.play=!c._ctl.play;if(!c._ctl.play)c._ctl.pos=Math.round(c._ctl.pos);b.textContent=c._ctl.play?"Пауза":"Играть";}break;}
+  case "fig-prev":case "fig-next":{const c=document.getElementById(b.dataset.fig||"fig-main");if(c&&c._ctl){c._ctl.play=false;c._ctl.pos=Math.round(c._ctl.pos)+(a==="fig-next"?1:-1);const pb=document.getElementById((b.dataset.fig||"fig-main")+"-play");if(pb)pb.textContent="Играть";}break;}
+  case "fig-speed":{const c=document.getElementById(b.dataset.fig||"fig-main");if(c&&c._ctl){c._ctl.speed=c._ctl.speed===1?0.4:1;b.classList.toggle("on",c._ctl.speed<1);}break;}
   case "food-day":foodDay=+b.dataset.v;render();break;
   case "body":if(wz)wzRead();st.profile.body=st.profile.body===b.dataset.v?null:b.dataset.v;st.profile.checked=true;save();render();break;
   case "extra":{const g=b.dataset.v;st.profile[g]=!st.profile[g];st.profile.checked=true;save();render();break;}
@@ -1999,7 +2001,7 @@ function drawPlayer(){
   root.innerHTML=h;mountPl();return;
  }
  if(P.si===0&&P.set===1&&P.phase==="ready"&&P.w.notes.length)h+='<div class="note small">'+P.w.notes.map(esc).join("<br>")+'</div>';
- h+='<span class="pl-block">'+esc(blockName(s.block))+'</span><div class="pl-name">'+esc(e.n)+'</div>'+(s.gear?'<div><span class="pill acc" style="font-size:14px;padding:5px 12px">'+esc(s.gear)+'</span></div>':'')+'<canvas class="fig" '+figAttr(e.pose,s.gear)+'></canvas>';
+ h+='<span class="pl-block">'+esc(blockName(s.block))+'</span><div class="pl-name">'+esc(e.n)+'</div>'+(s.gear?'<div><span class="pill acc" style="font-size:14px;padding:5px 12px">'+esc(s.gear)+'</span></div>':'')+figPlayer(e.pose,!(s.gear&&s.gear.indexOf("Гантель")===0),"fig-pl");
  if(P.phase==="feedback"){
   h+='<div class="card"><h3>Как зашло?</h3><p class="small muted">Тренер подстроит повторы в следующий раз.</p><div class="chips"><button class="chip" data-pl="fb" data-v="easy">Легко</button><button class="chip" data-pl="fb" data-v="ok">Нормально</button><button class="chip" data-pl="fb" data-v="hard">Тяжело</button>'+(e.sh||e.alt?'<button class="chip" data-pl="fb" data-v="pain">Больно</button>':'')+'</div></div><div class="pl-actions"><button class="btn block" data-pl="fb" data-v="ok">Дальше</button></div></div>';
   root.innerHTML=h;mountPl();return;
