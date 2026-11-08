@@ -145,6 +145,8 @@ table.mt td:first-child,table.mt th:first-child{text-align:left}
 .pl-actions .row .btn{flex:1}
 .iconbtn{appearance:none;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);display:grid;place-items:center;cursor:pointer;flex:none}
 .iconbtn svg{width:20px;height:20px}
+.figbtn{appearance:none;width:48px;height:48px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.figbtn svg{width:22px;height:22px}
 
 /* sheet + toast */
 #sheet{position:fixed;inset:0;z-index:60;background:color-mix(in srgb, #000 45%, transparent);display:flex;align-items:flex-end;justify-content:center}
@@ -931,8 +933,8 @@ const HANG=[63,22,60,32,58,20,60,9,60,58,60,74,57,89], TOP=[62,4,60,14,51,16,58,
 const SUP=[20,86,30,87,31,74,31,62,56,89,68,74,77,91];
 G.POSES={
  march:[{p:[60,18,60,28,56,40,64,48,60,55,73,58,72,75],l2:[60,73,60,91]},{p:[60,18,60,28,64,40,57,48,60,55,60,73,60,91],l2:[73,58,72,75]}],
- armcirc:[{p:[60,18,60,28,72,31,84,30,60,55,60,73,60,91]},{p:[60,18,60,28,68,19,78,12,60,55,60,73,60,91]}],
- hips:[{p:[57,18,58,28,57,42,58,55,62,55,61,73,60,91]},{p:[63,18,62,28,63,42,62,55,58,55,59,73,60,91]}],
+ armcirc:[{p:[60,16,60,28,73,28,86,28,60,55,62,73,64,91],e2:[47,28,34,28],l2:[58,73,56,91]},{p:[60,16,60,28,71,26,82,24,60,55,62,73,64,91],e2:[49,26,38,24],l2:[58,73,56,91]},{p:[60,16,60,28,69,28,78,28,60,55,62,73,64,91],e2:[51,28,42,28],l2:[58,73,56,91]},{p:[60,16,60,28,71,30,82,32,60,55,62,73,64,91],e2:[49,30,38,32],l2:[58,73,56,91]}],
+ hips:[{p:[62,17,60,28,68,40,62,52,57,55,62,73,66,91],e2:[52,40,52,52],l2:[56,73,54,91]},{p:[60,17,60,28,68,40,65,54,60,57,63,73,66,91],e2:[52,40,55,54],l2:[57,73,54,91]},{p:[58,17,60,28,68,40,68,52,63,55,64,73,66,91],e2:[52,40,58,52],l2:[58,73,54,91]},{p:[60,17,60,28,68,40,65,50,60,53,63,73,66,91],e2:[52,40,55,50],l2:[57,73,54,91]}],
  squatbw:[{p:[60,18,60,28,72,30,84,30,60,55,60,73,60,91]},{p:[60,32,57,41,70,42,82,42,46,66,64,72,60,91]}],
  goblet:[{p:[60,18,60,28,66,38,63,32,60,55,60,73,60,91],db:1},{p:[60,32,57,41,66,50,64,43,46,66,64,72,60,91],db:1}],
  rdl:[{p:ST.slice(),db:1},{p:[84,44,75,47,75,60,75,72,52,55,57,73,60,91],db:1}],
@@ -961,7 +963,7 @@ G.POSES={
  necks:[{p:[60,18,60,28,67,20,62,11,60,55,60,73,60,91]},{p:[60.5,18,60,28,67,20,62.5,11,60,55,60,73,60,91]}],
  chintuck:[{p:mod(ST,{0:63})},{p:mod(ST,{0:57.5,1:19})}],
  er:[{p:[16,82,26,84,40,84,48,90,54,86,70,86,88,88],db:1},{p:[16,82,26,84,40,84,44,72,54,86,70,86,88,88],db:1}],
- cat:[{p:[87,64,78,72,78,82,78,91,48,73,48,91,28,91]},{p:[84,80,77,68,78,80,78,91,48,71,48,91,28,91]}],
+ cat:[{p:[87,64,78,72,78,82,78,91,48,73,48,91,28,91],sp:[63,84],cap:"Корова: на вдохе прогни спину вниз, голову подними"},{p:[84,80,77,68,78,80,78,91,48,71,48,91,28,91],sp:[62,55],cap:"Кошка: на выдохе выгни спину вверх, голову опусти"}],
  schest:[{p:[62,18,62,28,52,27,46,20,61,55,60,73,60,91],door:1},{p:[65,18,64,28,53,28,46,20,62,55,60,73,60,91],door:1}],
  slats:[{p:[70,63,62,64,72,63,82,62,40,70,40,91,20,91],bench:[78,64,30,28]},{p:[70,71,62,68,72,65,82,62,40,70,40,91,20,91],bench:[78,64,30,28]}],
  shams:[{p:[52,54,48,64,56,72,64,80,40,88,60,88,80,88]},{p:[66,67,58,72,68,80,78,86,40,88,60,88,80,88]}],
@@ -1193,7 +1195,10 @@ try{if(window.speechSynthesis)window.speechSynthesis.onvoiceschanged=function(){
 function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()||"#888";}
 function lerpArr(a,b,t){if(!a&&!b)return null;a=a||b;b=b||a;return a.map(function(v,i){return v+(b[i]-v)*t;});}
 const figs=new Set();
-function figCaps(poses){return poses.map(function(p,i){return p.cap?K.sideTxt(p.cap,st.fight):(poses.length===2?(i===0?"Исходное положение":"Конечное положение"):"");});}
+function figCaps(poses,ex){
+ const how=(ex&&EX[ex]&&EX[ex].how)||[];const n=poses.length;
+ return poses.map(function(p,i){if(p.cap)return K.sideTxt(p.cap,st.fight);if(how.length)return how[Math.min(how.length-1,Math.floor(i*how.length/n))];return n===2?(i===0?"Начало движения":"Конец движения"):"";});
+}
 function mountFig(canvas,poseName){
  if(canvas.dataset.ctl==="1")canvas._ctl={play:true,speed:1,pos:0,last:null};
  canvas._nodb=canvas.dataset.nodb==="1";
@@ -1222,7 +1227,9 @@ function drawFig(c,t,ia,ib){
  if(l2)seg([p[8],p[9],l2[0],l2[1],l2[2],l2[3]],fig2,4.2);
  if(e2)seg([p[2],p[3],e2[0],e2[1],e2[2],e2[3]],fig2,3.6);
  seg([p[8],p[9],p[10],p[11],p[12],p[13]],fig,4.6);
- seg([p[2],p[3],p[8],p[9]],fig,5.2);
+ const sp=(A.sp&&B.sp)?lerpArr(A.sp,B.sp,t):null;
+ if(sp){g.strokeStyle=fig;g.lineWidth=5.2;g.beginPath();g.moveTo(p[2],p[3]);g.quadraticCurveTo(sp[0],sp[1],p[8],p[9]);g.stroke();}
+ else seg([p[2],p[3],p[8],p[9]],fig,5.2);
  seg([p[0],p[1],p[2],p[3]],fig,3.4);
  g.fillStyle=cssv("--surface");g.strokeStyle=fig;g.lineWidth=3;g.beginPath();g.arc(p[0],p[1],5.6,0,Math.PI*2);g.fill();g.stroke();
  seg([p[2],p[3],p[4],p[5],p[6],p[7]],fig,3.8);
@@ -1247,13 +1254,13 @@ function animLoop(ts){
    c._seq=null;c._poses=window.POSES.f_stance;}
   const n=c._poses.length,per=1100;
   const ease=function(fr){const x=Math.min(1,fr*1.5);return x<0.5?2*x*x:1-Math.pow(-2*x+2,2)/2;};
-  if(c._ctl){const C=c._ctl;if(C.last==null)C.last=ts;if(C.play&&!reduce)C.pos+=(ts-C.last)/per*C.speed;C.last=ts;
+  if(c._ctl){const C=c._ctl;if(C.last==null)C.last=ts;if(C.play)C.pos+=(ts-C.last)/per*C.speed;C.last=ts;
    const seg=((Math.floor(C.pos)%n)+n)%n,fr=C.play?C.pos-Math.floor(C.pos):0,nx=(seg+1)%n;
-   drawFig(c,ease(fr),seg,nx);
-   const caps=figCaps(c._poses);const cap=C.play?caps[nx]:caps[seg];const el=document.getElementById((c.id||"fig-main")+"-cap");
+   const et=ease(fr);drawFig(c,et,seg,nx);
+   const caps=figCaps(c._poses,c.dataset.ex);const cap=(C.play&&et>=0.5)?caps[nx]:caps[seg];const el=document.getElementById((c.id||"fig-main")+"-cap");
    if(el&&el.textContent!==cap)el.textContent=cap||"";return;}
-  if(n>2){const pos=ts/per,seg=Math.floor(pos)%n;drawFig(c,reduce?0:ease(pos-Math.floor(pos)),seg,(seg+1)%n);return;}
-  const t=reduce?0:(1-Math.cos((ts/2600)*Math.PI*2))/2;drawFig(c,t);});
+  if(n>2){const pos=ts/per,seg=Math.floor(pos)%n;drawFig(c,ease(pos-Math.floor(pos)),seg,(seg+1)%n);return;}
+  const t=(1-Math.cos((ts/2600)*Math.PI*2))/2;drawFig(c,t);});
  requestAnimationFrame(animLoop);
 }
 requestAnimationFrame(animLoop);
@@ -1715,15 +1722,16 @@ function openSheet(html){$("#sheet-body").innerHTML=html;$("#sheet").hidden=fals
 function closeSheet(){$("#sheet").hidden=true;$("#sheet-body").innerHTML="";}
 $("#sheet").addEventListener("click",function(e){if(e.target.id==="sheet")closeSheet();});
 function videoLink(q){return '<a class="btn ghost block" href="https://www.youtube.com/results?search_query='+encodeURIComponent(q)+'" target="_blank" rel="noopener">Смотреть видео на YouTube</a><p class="small muted" style="margin:0">Откроется поиск видео — выбери ролик с понятным объяснением.</p>';}
-function figPlayer(pose,nodb,fid){
+const ICON_PAUSE='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+const ICON_PLAY='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+function figPlayer(pose,nodb,fid,ex){
  fid=fid||"fig-main";
- const ic=function(d){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg>';};
- return '<canvas class="fig" id="'+fid+'" data-pose="'+pose+'" data-ctl="1"'+(nodb?' data-nodb="1"':'')+'></canvas><p class="target" id="'+fid+'-cap" style="min-height:44px;margin:0;font-weight:700"></p><div class="row" style="justify-content:center;flex-wrap:nowrap"><button class="iconbtn" data-act="fig-prev" data-fig="'+fid+'" aria-label="Предыдущий шаг">'+ic("M15 6l-6 6 6 6")+'</button><button class="btn small" data-act="fig-play" data-fig="'+fid+'" id="'+fid+'-play" style="min-width:110px">Пауза</button><button class="iconbtn" data-act="fig-next" data-fig="'+fid+'" aria-label="Следующий шаг">'+ic("M9 6l6 6-6 6")+'</button><button class="chip" data-act="fig-speed" data-fig="'+fid+'">Медленно</button></div>';
+ return '<div style="position:relative;width:100%;max-width:300px;margin:0 auto"><canvas class="fig" id="'+fid+'" data-pose="'+pose+'" data-ctl="1"'+(ex?' data-ex="'+ex+'"':'')+(nodb?' data-nodb="1"':'')+' data-act="fig-play" data-fig="'+fid+'" style="cursor:pointer"></canvas><button class="figbtn" data-act="fig-play" data-fig="'+fid+'" id="'+fid+'-play" aria-label="Пауза" style="position:absolute;right:10px;bottom:10px">'+ICON_PAUSE+'</button><button class="chip" data-act="fig-speed" data-fig="'+fid+'" style="position:absolute;right:10px;top:10px;min-height:32px;padding:4px 10px;font-size:13px">1×</button></div><p class="target" id="'+fid+'-cap" style="min-height:44px;margin:0;font-weight:700"></p>';
 }
 function howtoHtml(id){
  const e=EX[id];const gear=K.gearFor(id,st.profile);
  let h='<div class="row between"><h2>'+esc(e.n)+'</h2><button class="iconbtn" data-act="sheet-close" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>';
- h+=(gear?'<div><span class="pill acc">'+esc(gear)+'</span></div>':'')+figPlayer(e.pose,!(gear&&gear.indexOf("Гантель")===0))+'<p class="small muted">Работают: '+esc(e.m)+' · '+esc(e.eq)+(e.s>1?" · на каждую сторону":"")+'</p><ol class="how">';
+ h+=(gear?'<div><span class="pill acc">'+esc(gear)+'</span></div>':'')+figPlayer(e.pose,!(gear&&gear.indexOf("Гантель")===0),"fig-main",id)+'<p class="small muted">Работают: '+esc(e.m)+' · '+esc(e.eq)+(e.s>1?" · на каждую сторону":"")+'</p><ol class="how">';
  e.how.forEach(function(x){h+='<li>'+esc(x)+'</li>';});
  h+='</ol>';
  if(e.tip)h+='<div class="note">'+esc(e.tip)+'</div>';
@@ -1836,9 +1844,8 @@ document.addEventListener("click",function(ev){
   case "ft-how":openSheet(ftHowHtml(b.dataset.v));break;
   case "ft-learn":{const id=b.dataset.v;st.fight.learned[id]=!st.fight.learned[id];save();if(b.dataset.close)closeSheet();render();break;}
   case "ft-level":st.fight.level=Math.min(4,+b.dataset.v);save();render();window.scrollTo(0,0);toast("Открыт уровень "+st.fight.level);break;
-  case "fig-play":{const c=document.getElementById(b.dataset.fig||"fig-main");if(c&&c._ctl){c._ctl.play=!c._ctl.play;if(!c._ctl.play)c._ctl.pos=Math.round(c._ctl.pos);b.textContent=c._ctl.play?"Пауза":"Играть";}break;}
-  case "fig-prev":case "fig-next":{const c=document.getElementById(b.dataset.fig||"fig-main");if(c&&c._ctl){c._ctl.play=false;c._ctl.pos=Math.round(c._ctl.pos)+(a==="fig-next"?1:-1);const pb=document.getElementById((b.dataset.fig||"fig-main")+"-play");if(pb)pb.textContent="Играть";}break;}
-  case "fig-speed":{const c=document.getElementById(b.dataset.fig||"fig-main");if(c&&c._ctl){c._ctl.speed=c._ctl.speed===1?0.4:1;b.classList.toggle("on",c._ctl.speed<1);}break;}
+  case "fig-play":{const fid=b.dataset.fig||"fig-main";const c=document.getElementById(fid);if(c&&c._ctl){c._ctl.play=!c._ctl.play;const pb=document.getElementById(fid+"-play");if(pb){pb.innerHTML=c._ctl.play?ICON_PAUSE:ICON_PLAY;pb.setAttribute("aria-label",c._ctl.play?"Пауза":"Играть");}}break;}
+  case "fig-speed":{const c=document.getElementById(b.dataset.fig||"fig-main");if(c&&c._ctl){c._ctl.speed=c._ctl.speed===1?0.4:1;b.textContent=c._ctl.speed<1?"0,5×":"1×";b.classList.toggle("on",c._ctl.speed<1);}break;}
   case "food-day":foodDay=+b.dataset.v;render();break;
   case "body":if(wz)wzRead();st.profile.body=st.profile.body===b.dataset.v?null:b.dataset.v;st.profile.checked=true;save();render();break;
   case "extra":{const g=b.dataset.v;st.profile[g]=!st.profile[g];st.profile.checked=true;save();render();break;}
@@ -2001,7 +2008,7 @@ function drawPlayer(){
   root.innerHTML=h;mountPl();return;
  }
  if(P.si===0&&P.set===1&&P.phase==="ready"&&P.w.notes.length)h+='<div class="note small">'+P.w.notes.map(esc).join("<br>")+'</div>';
- h+='<span class="pl-block">'+esc(blockName(s.block))+'</span><div class="pl-name">'+esc(e.n)+'</div>'+(s.gear?'<div><span class="pill acc" style="font-size:14px;padding:5px 12px">'+esc(s.gear)+'</span></div>':'')+figPlayer(e.pose,!(s.gear&&s.gear.indexOf("Гантель")===0),"fig-pl");
+ h+='<span class="pl-block">'+esc(blockName(s.block))+'</span><div class="pl-name">'+esc(e.n)+'</div>'+(s.gear?'<div><span class="pill acc" style="font-size:14px;padding:5px 12px">'+esc(s.gear)+'</span></div>':'')+figPlayer(e.pose,!(s.gear&&s.gear.indexOf("Гантель")===0),"fig-pl",s.id);
  if(P.phase==="feedback"){
   h+='<div class="card"><h3>Как зашло?</h3><p class="small muted">Тренер подстроит повторы в следующий раз.</p><div class="chips"><button class="chip" data-pl="fb" data-v="easy">Легко</button><button class="chip" data-pl="fb" data-v="ok">Нормально</button><button class="chip" data-pl="fb" data-v="hard">Тяжело</button>'+(e.sh||e.alt?'<button class="chip" data-pl="fb" data-v="pain">Больно</button>':'')+'</div></div><div class="pl-actions"><button class="btn block" data-pl="fb" data-v="ok">Дальше</button></div></div>';
   root.innerHTML=h;mountPl();return;
@@ -2017,7 +2024,7 @@ function drawPlayer(){
   h+='<p class="target"><b>'+lbl+'</b></p><div class="timer '+(P.phase==="run"?"run":"")+'" id="pl-time">'+fmtClock(remain())+'</div>';
   if(e.call&&P.phase==="run")h+='<div class="target" id="pl-call" style="font-family:var(--f-display);font-weight:700;font-size:24px;min-height:32px;color:var(--accent)">'+esc(P.callTxt||"")+'</div><p class="target small muted" id="pl-hint" style="min-height:20px;margin:0">'+esc(P.callHint||"")+'</p>';
  }
- h+='<details class="card"><summary>Как делать</summary><ol class="how" style="margin-top:8px">'+e.how.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+'</ol>'+(e.tip?'<div class="note small" style="margin-top:8px">'+esc(e.tip)+'</div>':'')+'<button class="btn small block" style="margin-top:8px" data-act="howto" data-id="'+s.id+'">Анимация по шагам и видео</button></details>';
+ h+='<details class="card"'+(P.phase==="ready"&&P.set===1?" open":"")+'><summary>Как делать</summary><ol class="how" style="margin-top:8px">'+e.how.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+'</ol>'+(e.tip?'<div class="note small" style="margin-top:8px">'+esc(e.tip)+'</div>':'')+'<button class="btn small block" style="margin-top:8px" data-act="howto" data-id="'+s.id+'">Анимация по шагам и видео</button></details>';
  if(e.sh&&hasArea("shoulder"))h+='<div class="note red small">Плечо: без боли. Больно — уменьши амплитуду или пропусти.</div>';
  h+='<div class="pl-actions">';
  if(s.k==="reps")h+='<button class="btn primary block" data-pl="set-done">Сделал подход ✓</button>';
